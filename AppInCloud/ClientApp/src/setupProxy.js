@@ -6,6 +6,7 @@ const target = env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_H
 
 const context =  [
   "/weatherforecast",
+  "/apk",
   "/_configuration",
   "/.well-known",
   "/Identity",
@@ -16,7 +17,7 @@ const context =  [
 
 module.exports = function(app) {
   const appProxy = createProxyMiddleware(context, {
-    target: target,
+    target: target, 
     secure: false,
     headers: {
       Connection: 'Keep-Alive'

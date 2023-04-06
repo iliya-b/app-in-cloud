@@ -10,10 +10,12 @@ public class ApkController : ControllerBase
 {
   
     private readonly ILogger<ApkController> _logger;
+    private readonly ADB _adb;
 
-    public ApkController(ILogger<ApkController> logger)
+    public ApkController(ILogger<ApkController> logger, ADB adb)
     {
         _logger = logger;
+        _adb = adb;
     }
  
     [HttpGet]
@@ -22,17 +24,20 @@ public class ApkController : ControllerBase
         return Enumerable.Range(1, 5);
     }
     [HttpPost]
-    public async Task<IActionResult> Post(IFormFile formFile)
+    [RequestSizeLimit(1073741824)] 
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Post(IFormFile apk)
     {
         var filePath = "";
-        if (formFile.Length > 0)
+        if (apk.Length > 0)
         {
-            filePath = Path.GetTempFileName();
+            filePath = Path.GetTempFileName() + ".apk";
             using (var stream = System.IO.File.Create(filePath))
             {
-                await formFile.CopyToAsync(stream);
+                await apk.CopyToAsync(stream);
             }
+            await _adb.install(filePath);            
         }
-        return Ok(new { count = 1, formFile.Length, path=filePath });
+        return Ok(new { count = 1, apk.Length, path=filePath });
     }
 }

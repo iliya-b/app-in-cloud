@@ -6,6 +6,8 @@ using AppInCloud.Data;
 using AppInCloud.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
 //
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -24,6 +26,7 @@ builder.Services.AddAuthentication()
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddScoped<AppInCloud.ADB>();
 
 var app = builder.Build();
 
@@ -52,5 +55,11 @@ app.MapControllerRoute(
 app.MapRazorPages();
 
 app.MapFallbackToFile("index.html");;
+
+
+foreach (var c in builder.Configuration.AsEnumerable())
+{
+    Console.WriteLine(c.Key + " = " + c.Value);
+}
 
 app.Run();

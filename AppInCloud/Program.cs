@@ -6,6 +6,7 @@ using AppInCloud.Data;
 using AppInCloud.Models;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 //
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -23,8 +25,14 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
 builder.Services.AddIdentityServer()
     .AddApiAuthorization<ApplicationUser, ApplicationDbContext>();
 
-builder.Services.AddAuthentication()
+builder.Services.AddAuthentication(options => { // todo: why it's really required when jwt is used?
+            options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+            options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+        })
     .AddIdentityServerJwt();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
@@ -53,17 +61,12 @@ app.UseAuthentication();
 app.UseIdentityServer();
 app.UseAuthorization();
 
+// app.MapControllers();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller}/{action=Index}/{id?}");
 app.MapRazorPages();
 
 app.MapFallbackToFile("index.html");;
-
-
-foreach (var c in builder.Configuration.AsEnumerable())
-{
-    Console.WriteLine(c.Key + " = " + c.Value);
-}
 
 app.Run();

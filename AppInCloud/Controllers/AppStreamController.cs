@@ -1,6 +1,5 @@
-using System.Text.Json;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json.Serialization;
 
 namespace AppInCloud.Controllers;
 
@@ -12,24 +11,32 @@ public class AppStreamController : ControllerBase
     
     private readonly ILogger<AppStreamController> _logger;
     private readonly ADB _adb;
+    private readonly Data.ApplicationDbContext _db;
+    private readonly UserManager<Models.ApplicationUser> _userManager;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AppStreamController(ILogger<AppStreamController> logger, ADB adb)
+    public AppStreamController(ILogger<AppStreamController> logger, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, UserManager<Models.ApplicationUser> userManager)
     {
         _logger = logger;
         _adb = adb;
+        _db = db;
+        _userManager = userManager;
+        _httpContextAccessor = httpContextAccessor;
     }
  
+
+ /**
+    Start application and return web rtc parameters
+    todo: use real webrtc, not iframe
+    */
     [HttpGet]
-    public Models.App Get(int id)
+    public async Task<string> Get(int id)
     {
-        return new Models.App {Id=id, Name = "App " + id, Status=Models.AppStatuses.Ready, Type=Models.AppTypes.APK};
+        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
+        var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
+        await _adb.start(app.PackageName);
+        
+        return "https://localhost:8443/devices/" + app.DeviceId + "/files/client.html";
     }
-    
-    [HttpPost]
-    [RequestSizeLimit(1073741824)] // 1GB
-    [Consumes("multipart/form-data")]
-    public async Task<IActionResult> Post(IFormFile apk)
-    {
-        return UnprocessableEntity();
-    }
+
 }

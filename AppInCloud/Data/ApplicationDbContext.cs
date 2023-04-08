@@ -8,6 +8,8 @@ namespace AppInCloud.Data;
 
 public class ApplicationDbContext : ApiAuthorizationDbContext<ApplicationUser>
 {
+    public DbSet<MobileApp> MobileApps { get; set; }
+
     public ApplicationDbContext(DbContextOptions options, IOptions<OperationalStoreOptions> operationalStoreOptions)
         : base(options, operationalStoreOptions)
     {

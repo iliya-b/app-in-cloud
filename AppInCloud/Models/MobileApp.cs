@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+
 namespace AppInCloud.Models;
 
 
@@ -13,17 +15,19 @@ public enum AppTypes
     APK, AAB
 }     
 
-public class App
+public class MobileApp
 {
     public int Id { get; set; }
     public string Name { get; set; }
+    public string PackageName { get; set; }
     public AppStatuses Status { get; set; }
 
     public AppTypes Type { get; set; }
 
     public DateTime CreatedTimestamp { get; set; }
-
-    public int UserId { get; set; }
+    public string DeviceId { get; set; }
+    public string UserId { get; set; }
     public ApplicationUser User  { get; set; } = null!;
 
 }
+

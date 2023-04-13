@@ -232,3 +232,4 @@ _Pvt_Extensions
 .fake/
 
 app.db*
+app.sqlite*

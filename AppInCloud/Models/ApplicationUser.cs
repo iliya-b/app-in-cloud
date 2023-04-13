@@ -7,6 +7,6 @@ public class ApplicationUser : IdentityUser
     public ICollection<MobileApp> MobileApps { get; set; }
     
 
-    public ICollection<Device> Devices { get; set; }
+    public List<Device> Devices { get; } = new();
     
 }

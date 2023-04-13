@@ -1,9 +1,11 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AppInCloud.Controllers;
 
-// [Authorize]
+[Microsoft.AspNetCore.Authorization.Authorize]
 [ApiController]
 [Route("[controller]")]
 public class AppStreamController : ControllerBase
@@ -14,7 +16,13 @@ public class AppStreamController : ControllerBase
     private readonly Data.ApplicationDbContext _db;
     private readonly UserManager<Models.ApplicationUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    static readonly HttpClient client = new HttpClient();
+    static readonly HttpClient client = new HttpClient( 
+        new HttpClientHandler {
+            ClientCertificateOptions = ClientCertificateOption.Manual,
+            ServerCertificateCustomValidationCallback = 
+                (httpRequestMessage, cert, cetChain, policyErrors) => true 
+        }
+    );
 
     public AppStreamController(ILogger<AppStreamController> logger, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, UserManager<Models.ApplicationUser> userManager)
     {
@@ -23,7 +31,8 @@ public class AppStreamController : ControllerBase
         _db = db;
         _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
-    }
+
+    }   
  
 
  /**
@@ -43,34 +52,29 @@ public class AppStreamController : ControllerBase
 
     public class DeviceRequest
     {
-                public string device_id { get; set; }
+        public string device_id { get; set; }
     }
     [HttpPost]
     [Route("/polled_connections")]
     public async Task<IActionResult> PolledConnection(DeviceRequest deviceRequest)
     {
         var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
-        var app  = _db.MobileApps.First(f => f.DeviceId == deviceRequest.device_id && f.UserId == userId);
-        if(app is null) {
-            return new JsonResult("[1]");
+        bool allowed = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First().Devices.Exists(f => f.Id == deviceRequest.device_id);
+        if(!allowed) {
+            return new JsonResult("error");
         }
         
         try	
         {
-            HttpResponseMessage response = await client.PostAsync("https://localhost:8532/polled_connections", new StringContent("{\"device_id\": \""+deviceRequest.device_id+"\"}"));
+            HttpResponseMessage response = await client.PostAsync("https://localhost:8532/polled_connections", new StringContent(JsonSerializer.Serialize(deviceRequest)));
             response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync();
-            // Above three lines can be replaced with new helper method below
-            // string responseBody = await client.GetStringAsync(uri);
-
-            return new JsonResult(responseBody);
+            return new ContentResult { Content = responseBody, ContentType = "application/json" };
         }
-        catch(HttpRequestException e)
+        catch (HttpRequestException)
         {
-            Console.WriteLine("\nException Caught!");	
-            Console.WriteLine("Message :{0} ",e.Message);
+            return new JsonResult("error");
         }
-        return new JsonResult("[2]");
     }
 
 }

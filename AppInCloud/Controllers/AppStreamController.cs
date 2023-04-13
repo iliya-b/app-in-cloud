@@ -44,9 +44,15 @@ public class AppStreamController : ControllerBase
     {
         var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
         var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
+        var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
+        if(user.Devices.Count() == 0){
+            return ("No device is available");
+        }
+        Models.Device device = user.Devices.First();
+        _adb.Serial = device.getSerialNumber();
         await _adb.start(app.PackageName);
         
-        return "https://localhost:8443/devices/" + app.DeviceId + "/files/client.html";
+        return "/devices/" + app.DeviceId + "/files/client.html";
     }
 
 

@@ -12,6 +12,8 @@ public class ADB
 {
         private readonly IConfiguration _config;
 
+        public string Serial {get; set;}
+
         public ADB(IConfiguration config) =>
                 _config = config;
 
@@ -24,7 +26,10 @@ public class ADB
             cmd.StartInfo.RedirectStandardOutput = true;
             cmd.StartInfo.CreateNoWindow = true;
             cmd.StartInfo.UseShellExecute = false;
-            cmd.StartInfo.Arguments = command;
+            cmd.StartInfo.Arguments =  command;
+            if(Serial.Length > 0) {
+                cmd.StartInfo.Arguments = "-s " + Serial + " " + cmd.StartInfo.Arguments;
+            }
             var cmdExited = new CmdExitedTaskWrapper();
             cmd.EnableRaisingEvents = true;
             cmd.Exited += cmdExited.EventHandler;

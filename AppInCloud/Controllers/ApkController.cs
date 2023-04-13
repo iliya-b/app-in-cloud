@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 
 namespace AppInCloud.Controllers;
 
@@ -54,7 +55,14 @@ public class ApkController : ControllerBase
             await file.CopyToAsync(stream);
         }
 
-        
+
+        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
+        var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
+        if(user.Devices.Count() == 0){
+            return NotFound("No device is available");
+        }
+        Models.Device device = user.Devices.First();
+        _adb.Serial = device.getSerialNumber();
         await _adb.install(filePath);    
 
         // now determine package name 
@@ -70,14 +78,13 @@ public class ApkController : ControllerBase
         PackageInfo[] packages = await _adb.getPackages();
         var package = packages.First(p => p.InstallerHashSum == installerHash);
 
-        var user = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
         _db.MobileApps.Add(new Models.MobileApp {
             Name = file.FileName,
             PackageName = package.Name,
-            UserId = user,
+            UserId = userId,
             Status = Models.AppStatuses.Ready,
             Type = type,
-            DeviceId = "cvd-1",
+            DeviceId = user.Devices.First().Id,
             CreatedTimestamp = DateTime.Now
         });
         await _db.SaveChangesAsync();            

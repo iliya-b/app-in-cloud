@@ -9,10 +9,14 @@ const context =  [
   "/apk",
   "/appstream",
   "/test",
+  "/devices",
+  
+  "/polled_connections",
+  "/infra_config",
   "/_configuration",
   "/.well-known",
   "/Identity",
-  "/connect",
+  "/connect", 
   "/ApplyDatabaseMigrations",
   "/_framework"
 ];

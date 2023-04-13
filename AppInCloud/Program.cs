@@ -7,9 +7,12 @@ using AppInCloud.Models;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 //
 // Add services to the container.
@@ -30,6 +33,9 @@ builder.Services.AddAuthentication(options => { // todo: why it's really require
             options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
         })
     .AddIdentityServerJwt();
+builder.Services.AddAuthorization(options => {
+    options.AddPolicy("authorized", p => p.RequireAuthenticatedUser());
+});
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
@@ -61,10 +67,21 @@ app.UseAuthentication();
 app.UseIdentityServer();
 app.UseAuthorization();
 
-// app.MapControllers();
+
+app.UseEndpoints(endpoints => {
+        endpoints.MapReverseProxy(pipe  => {
+            // pipe.Use( (HttpContext context, Func<Task> next) => {
+            //         context.Request.EnableBuffering();
+            //         return next();
+            // });
+        });
+});
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller}/{action=Index}/{id?}");
+
+// app.MapGet("/polled_connections", () => "wow");
 app.MapRazorPages();
 
 app.MapFallbackToFile("index.html");;

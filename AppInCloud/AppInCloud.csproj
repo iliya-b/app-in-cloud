@@ -14,6 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AndroidXml" Version="1.1.24" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.7.34" />
     <PackageReference Include="Hangfire.Core" Version="1.7.34" />
     <PackageReference Include="Hangfire.Storage.SQLite" Version="0.3.3" />

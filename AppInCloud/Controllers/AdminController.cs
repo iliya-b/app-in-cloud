@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using AppInCloud.Models;
+using Hangfire;
+using AppInCloud.Services;
 
 namespace AppInCloud.Controllers;
 
@@ -21,8 +23,9 @@ public class AdminController : ControllerBase
     private readonly UserManager<Models.ApplicationUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly InstallationService _installationService;
+    private readonly AndroidService _androidService;
 
-    public AdminController(ILogger<AdminController> logger, InstallationService installationService, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, UserManager<Models.ApplicationUser> userManager)
+    public AdminController(ILogger<AdminController> logger, InstallationService installationService, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, UserManager<Models.ApplicationUser> userManager, AndroidService androidService)
     {
         _installationService = installationService;
         _logger = logger;
@@ -30,6 +33,7 @@ public class AdminController : ControllerBase
         _db = db;
         _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
+        _androidService = androidService;
     }
 
     [HttpGet]
@@ -47,6 +51,16 @@ public class AdminController : ControllerBase
     {
         return  _db.DefaultApps.ToList();
     }
+    [HttpDelete]
+    [Route("DefaultApps/{id}")]
+    public IActionResult deleteDefaultApps(int id)
+    {
+        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext!.User);
+        var app = _db.DefaultApps.Find(id);
+        _db.DefaultApps.Remove(app);
+        _db.SaveChanges();
+        return Ok(new {});
+    }
     
     [HttpPost]
     [RequestSizeLimit(1073741824)] // 1GB
@@ -54,37 +68,20 @@ public class AdminController : ControllerBase
     [Route("Upload")]
     public async Task<IActionResult> Upload(IFormFile file)
     {
+        AppTypes type = file.FileName.EndsWith(".aab") ? AppTypes.AAB : AppTypes.APK;
+        string filePath = await _installationService.CopyInstaller(file);
+        string packageName = _androidService.getInstallerPackageName(filePath);
+        if(packageName is null) return UnprocessableEntity();
 
-            
-        if (file.Length == 0) throw new InvalidFileException() ;
-        Models.AppTypes type;
-        if (file.FileName.EndsWith(".aab")){
-            type = Models.AppTypes.AAB;
-        }else if (file.FileName.EndsWith(".apk")){
-            type = Models.AppTypes.APK;
-        }else {
-            throw new InvalidFileException();
+        foreach(Models.Device device in _db.Devices){
+            string deviceSerial = device.getSerialNumber();
+            var jobId = BackgroundJob.Enqueue<ADB>(job => job.install(deviceSerial, filePath));
         }
-        var filePath = Path.GetTempFileName() + "." + type.ToString();
-        using (var stream = System.IO.File.Create(filePath))
-        {
-            await file.CopyToAsync(stream);
-        }
-   
-        PackageInfo? package = null;
-        try{
-            foreach(Models.Device device in _db.Devices){
-                package = await _installationService.install(filePath, device.getSerialNumber());
-            }
-        }catch(InvalidFileException){
-            return UnprocessableEntity();
-        }
-        if(package is null) return UnprocessableEntity();
 
         _db.DefaultApps.Add(new Models.DefaultApp {
             Name = file.FileName,
-            PackageName = package.Name,
-            Type = package.Type == "aab" ? AppTypes.AAB : AppTypes.APK,
+            PackageName = packageName,
+            Type = type,
             CreatedTimestamp = DateTime.Now
         });
 
@@ -116,7 +113,7 @@ public class AdminController : ControllerBase
         // stop cuttlefish
         // start cuttlefish server with new N
 
-        await _installationService.start(N);
+        //await start(N);
         return Ok(new {});
     }
     [Route("/admin/reset-device")]

@@ -57,6 +57,9 @@ public class ADB
         public async Task install(string apkPath){
             await run("install " + apkPath);
         }
+        public async Task install(string deviceSerial, string apkPath){
+            await run(deviceSerial, "install " + apkPath);
+        }
 
         public async Task reboot(string deviceSerial){
             await run(deviceSerial, "reboot");

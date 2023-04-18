@@ -44,6 +44,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<AppInCloud.ADB>();
 builder.Services.AddScoped<AppInCloud.InstallationService>();
+builder.Services.AddScoped<AppInCloud.Services.AndroidService>();
 builder.Services.AddControllersWithViews().AddJsonOptions(options => {
     options.JsonSerializerOptions.Converters.Add (new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 });

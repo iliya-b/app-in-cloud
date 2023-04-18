@@ -18,7 +18,7 @@ const AppsTable = ({apps, deleteAction}) => {
         {apps.map(app =>
           <tr key={app.name}>  
             <td>{app.status}</td>
-            <td>{app.name}</td>
+            <td>{app.packageName}</td>
             <td>{app.type}</td>
             <td>
               <div className='btn-group  ' role="group">

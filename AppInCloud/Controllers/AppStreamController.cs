@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AppInCloud.Controllers;
 
 [Microsoft.AspNetCore.Authorization.Authorize]
+[Route("/api/v1/[controller]")]
 [ApiController]
-[Route("[controller]")]
 public class AppStreamController : ControllerBase
 {
     
@@ -40,6 +40,7 @@ public class AppStreamController : ControllerBase
     todo: use real webrtc, not iframe
     */
     [HttpGet]
+    [Route("")]
     public async Task<string> Get(int id)
     {
         var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);

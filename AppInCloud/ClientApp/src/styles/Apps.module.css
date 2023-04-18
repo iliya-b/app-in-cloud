@@ -1,0 +1,22 @@
+  .ActionButtons a {
+    text-decoration: none;
+    display: block;
+    margin-right: 25px;
+    border: 1px solid #151515;
+    padding-left: 3px;
+    padding-right: 3px;
+    border-radius: 5px;
+}
+.ActionButtons a:hover{
+    border: 1px solid gray;
+}
+  .ActionButtons{
+    display: flex;
+}
+
+.ActionButtons .RunBtn i {
+    color: green;
+}
+.ActionButtons .DeleteBtn i {
+  color: #151515;
+}

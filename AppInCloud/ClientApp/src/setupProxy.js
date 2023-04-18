@@ -10,6 +10,8 @@ const context =  [
   "/appstream",
   "/test",
   "/devices",
+  "/api",
+  "/hangfire",
   
   "/polled_connections",
   "/infra_config",

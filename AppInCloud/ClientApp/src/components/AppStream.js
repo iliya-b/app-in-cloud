@@ -7,7 +7,7 @@ export const AppStream = (props) => {
   const [url, setUrl] = useState()
   useEffect(() => {
     authService.getAccessToken().then(
-      token => fetch(`appstream?id=${id}`, {headers: !token ? {} : { 'Authorization': `Bearer ${token}` }})
+      token => fetch(`api/v1/appstream?id=${id}`, {headers: !token ? {} : { 'Authorization': `Bearer ${token}` }})
                 .then(
                   response => response.text().then(data => setUrl(data))
                 )
@@ -16,8 +16,8 @@ export const AppStream = (props) => {
 
   return (
   <div>
-    <h1 id="tabelLabel">App Stream #{id}</h1>
-    {url && <iframe height={640} width={360} src={url} title="cvd" class=""></iframe>}
+    <h1 >App Stream #{id}</h1>
+    {url && <iframe height={640} width={360} src={url} title="cvd"  ></iframe>}
   </div>
 );
 }

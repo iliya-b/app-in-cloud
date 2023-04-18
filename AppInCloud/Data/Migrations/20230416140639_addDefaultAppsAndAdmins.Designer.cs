@@ -3,6 +3,7 @@ using System;
 using AppInCloud.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AppInCloud.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20230416140639_addDefaultAppsAndAdmins")]
+    partial class addDefaultAppsAndAdmins
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.15");
@@ -151,8 +153,6 @@ namespace AppInCloud.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DeviceId");
 
                     b.HasIndex("UserId");
 
@@ -449,19 +449,11 @@ namespace AppInCloud.Data.Migrations
 
             modelBuilder.Entity("AppInCloud.Models.MobileApp", b =>
                 {
-                    b.HasOne("AppInCloud.Models.Device", "Device")
-                        .WithMany()
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("AppInCloud.Models.ApplicationUser", "User")
                         .WithMany("MobileApps")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Device");
 
                     b.Navigation("User");
                 });

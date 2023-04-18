@@ -7,14 +7,14 @@ using AppInCloud.Models;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.AspNetCore.Authorization;
+using Hangfire;
+using Hangfire.Storage.SQLite;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
-//
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -43,11 +43,21 @@ builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<AppInCloud.ADB>();
+builder.Services.AddScoped<AppInCloud.InstallationService>();
 builder.Services.AddControllersWithViews().AddJsonOptions(options => {
     options.JsonSerializerOptions.Converters.Add (new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 });
+
+builder.Services.AddHangfire(configuration => configuration
+        // .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseSQLiteStorage());
+builder.Services.AddHangfireServer();
+
 var app = builder.Build();
 
+app.UseHangfireDashboard();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -75,6 +85,8 @@ app.UseEndpoints(endpoints => {
             //         return next();
             // });
         });
+        endpoints.MapHangfireDashboard();
+
 });
 
 app.MapControllerRoute(
@@ -85,5 +97,4 @@ app.MapControllerRoute(
 app.MapRazorPages();
 
 app.MapFallbackToFile("index.html");;
-
 app.Run();

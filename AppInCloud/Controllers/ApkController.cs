@@ -5,11 +5,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using AppInCloud.Models;
+using Hangfire;
 
 namespace AppInCloud.Controllers;
 
 [Authorize]
 [ApiController]
+[Route("/api/v1/[controller]")]
 public class ApkController : ControllerBase
 {
     
@@ -18,36 +21,79 @@ public class ApkController : ControllerBase
     private readonly Data.ApplicationDbContext _db;
     private readonly UserManager<Models.ApplicationUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public ApkController(ILogger<ApkController> logger, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, UserManager<Models.ApplicationUser> userManager)
+    private readonly InstallationService _installationService;
+    public ApkController(ILogger<ApkController> logger, InstallationService installationService, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, UserManager<Models.ApplicationUser> userManager)
     {
         _logger = logger;
         _adb = adb;
         _db = db;
         _userManager = userManager;
+        _installationService = installationService;
         _httpContextAccessor = httpContextAccessor;
     }
 
     [HttpGet]
-    [Route("[controller]")]
+    [Route("")]
     public IEnumerable<Models.MobileApp> Get()
     {
-        return  _db.MobileApps.ToList();
+        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
+        return  _db.MobileApps.Where(f => f.UserId == userId).ToList();
+    }
+
+
+    [HttpDelete]
+    [Route("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
+        var app = _db.MobileApps.Where(f => f.Id == id && f.UserId == userId).Include(f => f.Device).First();
+        try{
+            await _adb.delete(app.Device.getSerialNumber(), app.PackageName);
+        }catch(Exception e){
+            var packages = await _adb.getPackages(app.Device.getSerialNumber());
+            if(packages.Any(p => p.Name == app.PackageName)){
+                throw e;
+            }
+        }
+        _db.MobileApps.Remove(app);
+        _db.SaveChanges();
+        return Ok(new {});
     }
     
     [HttpPost]
     [RequestSizeLimit(1073741824)] // 1GB
     [Consumes("multipart/form-data")]
-    [Route("[controller]/Upload")]
-    public async Task<IActionResult> Upload(IFormFile file)
+    [Route("Upload")]
+    public async Task<IActionResult> Upload(IFormFile file, [FromServices]IServiceScopeFactory scopeFactory)
     {
-        if (file.Length == 0) return UnprocessableEntity();
+        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
+        var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
+        if(user.Devices.Count() == 0){
+            return NotFound("No device is available");
+        }
+        Models.Device device = user.Devices.First();
+        
+        var entry = _db.MobileApps.Add(new Models.MobileApp {
+            Name = file.FileName,
+            PackageName = "",
+            UserId = userId,
+            Status = Models.AppStatuses.Installing,
+            Type = AppTypes.APK,
+            DeviceId = user.Devices.First().Id, 
+            CreatedTimestamp = DateTime.Now
+        }); 
+        await _db.SaveChangesAsync();   
+        int id = entry.Entity.Id;
+        string serial = device.getSerialNumber();
+        
+        if (file.Length == 0) throw new InvalidFileException() ;
         Models.AppTypes type;
         if (file.FileName.EndsWith(".aab")){
             type = Models.AppTypes.AAB;
         }else if (file.FileName.EndsWith(".apk")){
             type = Models.AppTypes.APK;
         }else {
-            return UnprocessableEntity();
+            throw new InvalidFileException();
         }
         var filePath = Path.GetTempFileName() + "." + type.ToString();
         using (var stream = System.IO.File.Create(filePath))
@@ -56,38 +102,8 @@ public class ApkController : ControllerBase
         }
 
 
-        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
-        var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
-        if(user.Devices.Count() == 0){
-            return NotFound("No device is available");
-        }
-        Models.Device device = user.Devices.First();
-        _adb.Serial = device.getSerialNumber();
-        await _adb.install(filePath);    
-
-        // now determine package name 
-        // todo: use direct method involving reading AndroidManifest.xml
-        var installerHash = "";
-        using (var sha256 = SHA256.Create())
-        {
-            using (var stream = file.OpenReadStream())
-            {
-                installerHash = BitConverter.ToString(sha256.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
-            }
-        }
-        PackageInfo[] packages = await _adb.getPackages();
-        var package = packages.First(p => p.InstallerHashSum == installerHash);
-
-        _db.MobileApps.Add(new Models.MobileApp {
-            Name = file.FileName,
-            PackageName = package.Name,
-            UserId = userId,
-            Status = Models.AppStatuses.Ready,
-            Type = type,
-            DeviceId = user.Devices.First().Id,
-            CreatedTimestamp = DateTime.Now
-        });
-        await _db.SaveChangesAsync();            
-        return Ok(new { count = 1, file.Length, path=filePath });
+        var jobId = BackgroundJob.Enqueue<InstallationService.InstallJob>( job => job.Run(filePath, id, serial) );
+        
+        return Ok(new { success=true });
     }
 }

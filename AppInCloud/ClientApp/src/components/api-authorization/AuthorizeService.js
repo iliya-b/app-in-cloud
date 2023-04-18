@@ -32,6 +32,14 @@ export class AuthorizeService {
     return user && user.access_token;
   }
 
+  async fetch(){
+    const args = arguments
+    const token = await authService.getAccessToken();
+    args[1] = args[1] === undefined ? {headers: {}} : args[1];
+    args[1].headers = args[1].headers === undefined ? {} : args[1].headers;
+    args[1].headers.Authorization = `Bearer ${token}`;
+    return fetch.apply(null, args);
+  }
   // We try to authenticate the user in three different ways:
   // 1) We try to see if we can authenticate the user silently. This happens
   //    when the user is already logged in on the IdP and is done using a hidden iframe

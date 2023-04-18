@@ -7,7 +7,7 @@ namespace AppInCloud.Models;
 
 public enum AppStatuses
 {
-    Ready, Error
+    Ready, Installing, Error
 }     
 
 public enum AppTypes
@@ -26,6 +26,7 @@ public class MobileApp
 
     public DateTime CreatedTimestamp { get; set; }
     public string DeviceId { get; set; }
+    public Device Device {get; set; } = null!;
     public string UserId { get; set; }
     public ApplicationUser User  { get; set; } = null!;
 

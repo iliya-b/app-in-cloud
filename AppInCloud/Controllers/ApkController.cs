@@ -52,7 +52,7 @@ public class ApkController : ControllerBase
         var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext!.User);
         var app = _db.MobileApps.Where(f => f.Id == id && f.UserId == userId).Include(f => f.Device).First();
         try{
-            await _adb.delete(app.Device.getSerialNumber(), app.PackageName);
+            await _adb.Uninstall(app.Device.getSerialNumber(), app.PackageName);
         }catch(Exception e){
             var packages = await _adb.getPackages(app.Device.getSerialNumber());
             if(packages.Any(p => p.Name == app.PackageName)){
@@ -111,7 +111,7 @@ public class ApkController : ControllerBase
         Data.ApplicationDbContext _db;
         public UserAppInstallationJob (ADB adb, Data.ApplicationDbContext db) => (_adb, _db) = (adb, db);
         public async Task InstallAndNotify(int appId, string filePath, string deviceSerial) {
-            await _adb.install(deviceSerial, filePath);
+            await _adb.Install(deviceSerial, filePath);
             var app = _db.MobileApps.Find(appId); // todo: handle not found case
             app!.Status = AppStatuses.Ready;
             _db.MobileApps.Update(app);

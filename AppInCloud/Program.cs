@@ -42,8 +42,9 @@ builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
-builder.Services.AddScoped<AppInCloud.ADB>();
-builder.Services.AddScoped<AppInCloud.InstallationService>();
+builder.Services.AddScoped<AppInCloud.Services.ADB>();
+builder.Services.AddScoped<AppInCloud.Services.InstallationService>();
+builder.Services.AddScoped<AppInCloud.Services.CuttlefishService>();
 builder.Services.AddScoped<AppInCloud.Services.AndroidService>();
 builder.Services.AddControllersWithViews().AddJsonOptions(options => {
     options.JsonSerializerOptions.Converters.Add (new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));

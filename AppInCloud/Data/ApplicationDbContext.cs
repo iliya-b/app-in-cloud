@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Duende.IdentityServer.EntityFramework.Options;
 using AppInCloud.Models;
+using AppInCloud.Models;
 
 namespace AppInCloud.Data;
 

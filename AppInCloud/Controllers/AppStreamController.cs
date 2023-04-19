@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AppInCloud.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -51,7 +52,7 @@ public class AppStreamController : ControllerBase
         }
         Models.Device device = user.Devices.First();
         _adb.Serial = device.getSerialNumber();
-        await _adb.start(app.PackageName);
+        await _adb.Start(app.PackageName);
         
         return "/devices/" + app.DeviceId + "/files/client.html";
     }

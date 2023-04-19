@@ -75,7 +75,7 @@ public class AdminController : ControllerBase
 
         foreach(Models.Device device in _db.Devices){
             string deviceSerial = device.getSerialNumber();
-            var jobId = BackgroundJob.Enqueue<ADB>(job => job.install(deviceSerial, filePath));
+            var jobId = BackgroundJob.Enqueue<ADB>(job => job.Install(deviceSerial, filePath));
         }
 
         _db.DefaultApps.Add(new Models.DefaultApp {
@@ -91,35 +91,57 @@ public class AdminController : ControllerBase
     }
 
 
-    [Route("/admin/add-device")]
-    public async Task<IActionResult> addDevice(int N){
-        
-        // HOME=$PWD ./bin/launch_cvd --num_instances ${N + 1} --base_instance_num 1
-
-        // first, reboot all the devices to save user data   (it's neccessairy due to the cuttlefish copy-on-write mechanism)
-        {
-            var tasks = _db.Devices.ToList().Select(device => _adb.reboot(device.getSerialNumber()));
-            await Task.WhenAll(tasks);
+    [HttpPost]
+    [Route("Devices/{deviceId}/Assign")]
+    public IActionResult assignDevice(string deviceId, [FromForm] string userEmail, [FromForm] bool unassign ){
+        var device = _db.Devices.Where(d => d.Id == deviceId).Include(d => d.Users).First();
+        if(unassign) {
+            device!.Users.Remove(device!.Users.Where(u => u.Email == userEmail).First());
+        }else{
+            var user = _db.Users.Where(u => u.Email == userEmail).First();
+            device!.Users.Add(user!);
         }
-
-        // wait for devices to reboot
-        {
-            IEnumerable<Task<bool>> tasks;
-            do{
-                tasks = _db.Devices.ToList().Select(device => _adb.healthCheck(device.getSerialNumber()));
-                await Task.WhenAll(tasks);
-            }while(!tasks.All(t => t.Result));
-        }
-        // stop cuttlefish
-        // start cuttlefish server with new N
-
-        //await start(N);
+        _db.Devices.Update(device);
+        _db.SaveChanges();
         return Ok(new {});
     }
-    [Route("/admin/reset-device")]
-    public async Task<IActionResult> resetDevice(){
+
+    [HttpPost]
+    [Route("Devices")]
+    public IActionResult changeAmountOfDevices([FromForm] int N){
+        var devices = _db.Devices.ToList();
+        var serials = devices.Select(d => d.getSerialNumber());
+        _db.Devices.RemoveRange(devices.Where(cvd => cvd.getCuttlefishNumber() > CuttlefishLaunchOptions.BaseNumber + N - 1).ToArray());
+        var newDevices = Enumerable.Range(
+            CuttlefishLaunchOptions.BaseNumber, 
+            N
+        ).Where(n => !devices.Any(cvd => cvd.getCuttlefishNumber() == n))
+        .Select(n => new Device { Id = "cvd-" + n, Memory=1024});
+
+        _db.Devices.AddRange(newDevices);
+        _db.SaveChanges(); // todo: add status to devices: provision / error / up / down
 
 
+        // before restart, we reboot all the devices to save user data
+        // (it's neccessairy due to the cuttlefish disk overlay mechanism)
+        var rams = _db.Devices.ToList().OrderBy(f => f.Id).Select(d => d.Memory);
+        var launchOptions = new CuttlefishLaunchOptions {
+            InstancesNumber = N, 
+            Memory = rams
+        };
+        var rebootJob = BackgroundJob.Enqueue<ADB>(job => job.RebootAndWait(serials));
+        // todo: check whether devices were on
+        var stopJob = BackgroundJob.ContinueJobWith<CuttlefishService>(rebootJob, job => job.Stop());
+        var launchJob = BackgroundJob.ContinueJobWith<CuttlefishService>(stopJob, job => job.Launch(launchOptions));
+        return Ok(new {});
+    }
+
+    [HttpPost]
+    [Route("Devices/{deviceId}/reset")]
+    public IActionResult resetDevice(string deviceId){
+        var device = _db.Devices.Where(d => d.Id == deviceId).First();
+        var deviceNumber = device.getCuttlefishNumber();
+        var rebootJob = BackgroundJob.Enqueue<CuttlefishService>(job => job.Powerwash(deviceNumber));
         return Ok(new {});
     }
 }

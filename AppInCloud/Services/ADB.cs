@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace AppInCloud;
+namespace AppInCloud.Services;
 
 
 public class PackageInfo {
@@ -50,24 +50,24 @@ public class ADB
             }
             return result.ToArray();
         }
-        public async Task delete(string serial, string package){
+        public async Task Uninstall(string serial, string package){
             await run(serial, "uninstall " + package);
         }
         
-        public async Task install(string apkPath){
+        public async Task Install(string apkPath){
             await run("install " + apkPath);
         }
-        public async Task install(string deviceSerial, string apkPath){
+        public async Task Install(string deviceSerial, string apkPath){
             await run(deviceSerial, "install " + apkPath);
         }
 
-        public async Task reboot(string deviceSerial){
+        public async Task Reboot(string deviceSerial){
             await run(deviceSerial, "reboot");
         }
 
-        public async Task<bool> healthCheck(string deviceSerial){
+        public async Task<bool> HealthCheck(string deviceSerial){
             try{
-                return "test" == (await run(deviceSerial, "echo test"))[0];
+                return "test" == (await run(deviceSerial, "shell echo test"))[0];
             }catch(Exception){
                 return false;
             }
@@ -91,21 +91,33 @@ public class ADB
         }
 
         
-        public async Task start(string package){
+        public async Task Start(string package){
             await run("shell monkey -p  " + package + " 1");
         }
 
-    private class CmdExitedTaskWrapper
-    {
-
-        private TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>();
-
-        public void EventHandler(object sender, EventArgs e)
+        public void RebootAndWait(IEnumerable<string> serials)
         {
-            _tcs.SetResult(true);
+            RebootAndWait(serials, 90000);
+        }
+        public void RebootAndWait(IEnumerable<string> serials, int timeout)
+        {
+            var rebootTasks = serials.Select(Reboot);
+            Task.WhenAll(rebootTasks).Wait();
+
+            var allUp = SpinWait.SpinUntil(() => {
+                var checkTasks = serials.Select(HealthCheck);
+                Task.WhenAll(checkTasks).Wait();
+                return checkTasks.All(t => t.Result);
+            }, timeout);
+
+            if(!allUp) throw new Exception("devices not up");
         }
 
-        public Task Task => _tcs.Task;
 
+    private class CmdExitedTaskWrapper
+    {
+        private TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>();
+        public void EventHandler(object sender, EventArgs e) => _tcs.SetResult(true);
+        public Task Task => _tcs.Task;
     }
 }

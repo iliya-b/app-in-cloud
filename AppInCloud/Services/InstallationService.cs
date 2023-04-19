@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using AppInCloud.Models;
 using Hangfire;
 
-namespace AppInCloud;
+namespace AppInCloud.Services;
 
 public class InvalidFileException : Exception {}
 

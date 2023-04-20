@@ -9,6 +9,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Hangfire;
 using Hangfire.Storage.SQLite;
+using AppInCloud.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,10 +24,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddIdentityServer()
-    .AddApiAuthorization<ApplicationUser, ApplicationDbContext>();
+    .AddApiAuthorization<ApplicationUser, ApplicationDbContext>()
+    .AddProfileService<ProfileService>();
 
 builder.Services.AddAuthentication(options => { // todo: why it's really required when jwt is used?
             options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
@@ -79,14 +82,51 @@ app.UseAuthentication();
 app.UseIdentityServer();
 app.UseAuthorization();
 
+using (IServiceScope scope = app.Services.CreateScope()) {
+        var RoleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var UserManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        string[] roleNames = { "Admin", "Manager", "Member" };
+        IdentityResult roleResult;
+
+        foreach (var roleName in roleNames)
+        {
+            var roleExist = await RoleManager.RoleExistsAsync(roleName);
+            if (!roleExist)
+            {
+                roleResult = await RoleManager.CreateAsync(new IdentityRole(roleName));
+            }
+        }
+
+        //Here you could create a super user who will maintain the web app
+        var poweruser = new ApplicationUser
+        {
+
+            UserName = app.Configuration["AppInCloud:DefaultAdminEmail"],
+            Email = app.Configuration["AppInCloud:DefaultAdminEmail"],
+            EmailConfirmed = true
+        };
+
+        string userPWD = app.Configuration["AppInCloud:DefaultAdminPassword"];
+        var _user = await UserManager.FindByEmailAsync(app.Configuration["AppInCloud:DefaultAdminEmail"]);
+
+       if(_user == null)
+       {
+            var createPowerUser = await UserManager.CreateAsync(poweruser, userPWD);
+            if (createPowerUser.Succeeded)
+            {
+                await UserManager.AddToRoleAsync(poweruser, "Admin");
+                Console.WriteLine("creating admin user");
+            }else{
+                Console.WriteLine("failed creating admin user: {0}", createPowerUser.Errors.First().Description);
+            }
+       }else{
+            Console.WriteLine("not creating admin user");
+       }
+}
+
 
 app.UseEndpoints(endpoints => {
-        endpoints.MapReverseProxy(pipe  => {
-            // pipe.Use( (HttpContext context, Func<Task> next) => {
-            //         context.Request.EnableBuffering();
-            //         return next();
-            // });
-        });
+        endpoints.MapReverseProxy(pipe  => {  });
         endpoints.MapHangfireDashboard();
 
 });
@@ -95,8 +135,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller}/{action=Index}/{id?}");
 
-// app.MapGet("/polled_connections", () => "wow");
 app.MapRazorPages();
 
-app.MapFallbackToFile("index.html");;
+app.MapFallbackToFile("index.html");
 app.Run();

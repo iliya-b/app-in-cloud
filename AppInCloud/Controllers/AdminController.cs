@@ -11,7 +11,7 @@ using AppInCloud.Services;
 
 namespace AppInCloud.Controllers;
 
-[Authorize]
+[Authorize(Roles = "Admin")]
 [Route("/api/v1/[controller]")]
 [ApiController]
 public class AdminController : ControllerBase
@@ -38,9 +38,14 @@ public class AdminController : ControllerBase
 
     [HttpGet]
     [Route("Devices")]
-    public IEnumerable<object> GetDevices()
+    public IActionResult GetDevices()
     {
-        return  _db.Devices.Include(f => f.Users).Select(d => new {Id=d.Id, Users = d.Users.Select(u => u.Email)}).ToList();
+        // todo: check progress of the background tasks
+        var list =  _db.Devices.Include(f => f.Users).Select(d => new {Id=d.Id, Users = d.Users.Select(u => u.Email)}).ToList();
+        return Ok(new {
+            Count=0,
+            List=list
+        });
     }
     
 

@@ -24,7 +24,7 @@ export const DeviceList = () => {
   const [reloadCounter, setReloadCounter] = useState(0)
   const reload = () => setReloadCounter(r => r+1)
   useEffect( () => {
-     authService.fetch('api/v1/admin/devices').then(r => r.json().then(data => setData(data)))
+     authService.fetch('api/v1/admin/devices').then(r => r.json().then(data => setData(data.list)))
   }, [reloadCounter]);
   const reAmount = () => {
     var number = prompt("Enter new amount:", data.length);
@@ -71,7 +71,7 @@ export const DeviceList = () => {
         <tr><td>ID</td><td>Users</td>
         <td>Actions 
           <button onClick={reAmount} className='btn btn-sm btn-outline-primary ms-2' title='Change amount'>
-            <i class="bi bi-plus-slash-minus"></i>
+            <i className="bi bi-plus-slash-minus"></i>
           </button>
         </td>
 </tr>
@@ -81,13 +81,13 @@ export const DeviceList = () => {
         <td>{device.id}</td>
         <td>
           {device.users.map(
-              u => <span title='Delete'  key={u} class="badge bg-secondary">
-                {u} <i class="bi bi-x-circle " style={{cursor: 'pointer'}} onClick={() => removeUser(device.id, u)} ></i>
+              u => <span title='Delete'  key={u} className="badge bg-secondary">
+                {u} <i className="bi bi-x-circle " style={{cursor: 'pointer'}} onClick={() => removeUser(device.id, u)} ></i>
 
                 </span>
           )}
           <button onClick={() => addUser(device.id)} className='btn btn-sm btn-outline-primary ms-2'>
-            <i class="bi bi-plus-circle"></i>
+            <i className="bi bi-plus-circle"></i>
           </button>
         </td>
         <td>

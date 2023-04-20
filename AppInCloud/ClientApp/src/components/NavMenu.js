@@ -1,38 +1,32 @@
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import { Collapse, Navbar, NavbarBrand, NavbarToggler, NavItem, NavLink } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { LoginMenu } from './api-authorization/LoginMenu';
+import authService from './api-authorization/AuthorizeService'
 import './NavMenu.css';
 
-export class NavMenu extends Component {
-  static displayName = NavMenu.name;
+export const NavMenu = () =>  {
+  const displayName = NavMenu.name;
 
-  constructor (props) {
-    super(props);
+  const [collapsed, collapse] = useState(true)  
+  const [isAdmin, setIsAdmin] = useState(false)  
 
-    this.toggleNavbar = this.toggleNavbar.bind(this);
-    this.state = {
-      collapsed: true
-    };
-  }
+  useEffect(() => {
+    authService.getUser().then(r => r.role === "Admin" && setIsAdmin(true))
+  }, [])
 
-  toggleNavbar () {
-    this.setState({
-      collapsed: !this.state.collapsed
-    });
-  }
-
-  render() {
-    return (
+  const toggleNavbar = () =>  collapse(r => !r)
+  
+  return (
       <header>
         <Navbar className="navbar-expand-sm navbar-toggleable-sm ng-white border-bottom box-shadow mb-3" container light>
           <NavbarBrand tag={Link} to="/">AppInCloud</NavbarBrand>
-          <NavbarToggler onClick={this.toggleNavbar} className="mr-2" />
-          <Collapse className="d-sm-inline-flex flex-sm-row-reverse" isOpen={!this.state.collapsed} navbar>
+          <NavbarToggler onClick={toggleNavbar} className="mr-2" />
+          <Collapse className="d-sm-inline-flex flex-sm-row-reverse" isOpen={!collapsed} navbar>
             <ul className="navbar-nav flex-grow">
-              <NavItem>
+              {isAdmin && <NavItem>
                 <NavLink tag={Link} className="text-dark" to="/admin">Admin</NavLink>
-              </NavItem>
+              </NavItem>}
   
               <NavItem>
                 <NavLink tag={Link} className="text-dark" to="/">Apps</NavLink>
@@ -44,5 +38,4 @@ export class NavMenu extends Component {
         </Navbar>
       </header>
     );
-  }
 }

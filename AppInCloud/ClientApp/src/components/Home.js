@@ -20,22 +20,38 @@ export class Home extends Component {
 
 
 export const DeviceList = () => {
-  const [data, setData] = useState([])
+  const [devicesInfo, setDevicesInfo] = useState({
+    count: 0,
+    list: []
+  })
+  const [error, setError] = useState("")
+  const data = devicesInfo.list;
   const [reloadCounter, setReloadCounter] = useState(0)
   const reload = () => setReloadCounter(r => r+1)
   useEffect( () => {
-     authService.fetch('api/v1/admin/devices').then(r => r.json().then(data => setData(data.list)))
+     authService.fetch('api/v1/admin/devices').then(r => r.json().then(data => {
+      setDevicesInfo(data)
+      setError(null)
+     } ))
   }, [reloadCounter]);
+
+  const handleResponse = r => {
+    if(r.status !== 200){
+      r.text().then(t => setError(t))
+    }else{
+      reload()
+    }
+  }
   const reAmount = () => {
     var number = prompt("Enter new amount:", data.length);
     if (!number) return;
     var number = Number.parseInt(number);
     if(number === data.length) return;
-    authService.fetch('api/v1/admin/devices', {
+    fetch('api/v1/admin/devices', {
       method: 'post', 
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},   
       body: "N=" + number
-    }).then(r => reload());
+    }).then(handleResponse);
   }
 
   
@@ -43,7 +59,7 @@ export const DeviceList = () => {
     authService.fetch('api/v1/admin/devices/' + deviceId + '/reset', {
       method: 'post', 
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},   
-    }).then(r => reload());
+    }).then(handleResponse);
   }
 
   
@@ -54,7 +70,7 @@ export const DeviceList = () => {
       method: 'post', 
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},   
       body: "userEmail=" + encodeURI(email)
-    }).then(r => reload());
+    }).then(handleResponse);
   }
 
   
@@ -63,11 +79,13 @@ export const DeviceList = () => {
       method: 'post', 
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},   
       body: "unassign=true&userEmail=" + encodeURI(email)
-    }).then(r => reload());
+    }).then(handleResponse);
   }
 
   return <table className='table table-bordered'>
       <thead>
+        {devicesInfo.count > 0 && <tr><td colSpan={3}><font color="green">running tasks</font>: {devicesInfo.count}</td></tr>}
+        {error  && <tr><td colSpan={3}><font color="red">{error}</font></td></tr>}
         <tr><td>ID</td><td>Users</td>
         <td>Actions 
           <button onClick={reAmount} className='btn btn-sm btn-outline-primary ms-2' title='Change amount'>

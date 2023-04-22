@@ -1,9 +1,6 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using AppInCloud.Models;
 using Hangfire;
@@ -36,14 +33,23 @@ public class AdminController : ControllerBase
         _androidService = androidService;
     }
 
+
+    private long tasksCount(){
+        var processing = JobStorage.Current.GetMonitoringApi().ProcessingJobs(0, int.MaxValue).Where(j=>j.Value.ServerId.StartsWith("cuttlefish:")).Count();
+        var enqueued = JobStorage.Current.GetMonitoringApi().EnqueuedCount("cuttlefish");
+        return processing + enqueued;
+    }
+
+    private bool canRunTask(){
+        return tasksCount() == 0;
+    }
     [HttpGet]
     [Route("Devices")]
     public IActionResult GetDevices()
     {
-        // todo: check progress of the background tasks
         var list =  _db.Devices.Include(f => f.Users).Select(d => new {Id=d.Id, Users = d.Users.Select(u => u.Email)}).ToList();
         return Ok(new {
-            Count=0,
+            Count=tasksCount(),
             List=list
         });
     }
@@ -87,6 +93,7 @@ public class AdminController : ControllerBase
             Name = file.FileName,
             PackageName = packageName,
             Type = type,
+            InstallerPath = filePath, // todo: save in non-temporal folder
             CreatedTimestamp = DateTime.Now
         });
 
@@ -114,6 +121,7 @@ public class AdminController : ControllerBase
     [HttpPost]
     [Route("Devices")]
     public IActionResult changeAmountOfDevices([FromForm] int N){
+        if(!canRunTask()) return UnprocessableEntity("Cannot add/remove devices: running other tasks");
         var devices = _db.Devices.ToList();
         var serials = devices.Select(d => d.getSerialNumber());
         _db.Devices.RemoveRange(devices.Where(cvd => cvd.getCuttlefishNumber() > CuttlefishLaunchOptions.BaseNumber + N - 1).ToArray());
@@ -130,23 +138,38 @@ public class AdminController : ControllerBase
         // before restart, we reboot all the devices to save user data
         // (it's neccessairy due to the cuttlefish disk overlay mechanism)
         var rams = _db.Devices.ToList().OrderBy(f => f.Id).Select(d => d.Memory);
+        var newSerials = _db.Devices.ToList().Select(d => d.getSerialNumber());
         var launchOptions = new CuttlefishLaunchOptions {
             InstancesNumber = N, 
             Memory = rams
         };
         var rebootJob = BackgroundJob.Enqueue<ADB>(job => job.RebootAndWait(serials));
-        // todo: check whether devices were on
         var stopJob = BackgroundJob.ContinueJobWith<CuttlefishService>(rebootJob, job => job.Stop());
-        var launchJob = BackgroundJob.ContinueJobWith<CuttlefishService>(stopJob, job => job.Launch(launchOptions));
+        var launchJob = BackgroundJob.ContinueJobWith<CuttlefishService>(stopJob, job => job.Launch(launchOptions), JobContinuationOptions.OnAnyFinishedState);
+
+
+        var defaultApps = _db.DefaultApps.ToList();
+        foreach(var newSerial in newSerials){
+            foreach(var app in defaultApps){
+                var installJob = BackgroundJob.ContinueJobWith<ADB>(launchJob, adb => adb.Install(newSerial, app.InstallerPath));
+            }
+        }
         return Ok(new {});
     }
 
     [HttpPost]
-    [Route("Devices/{deviceId}/reset")]
+    [Route("Devices/{deviceId}/Reset")]
     public IActionResult resetDevice(string deviceId){
+        if(!canRunTask()) return UnprocessableEntity("Cannot handle this device now: running other tasks");
         var device = _db.Devices.Where(d => d.Id == deviceId).First();
         var deviceNumber = device.getCuttlefishNumber();
         var rebootJob = BackgroundJob.Enqueue<CuttlefishService>(job => job.Powerwash(deviceNumber));
+        
+        var defaultApps = _db.DefaultApps.ToList();
+        foreach(var app in defaultApps){
+            var installJob = BackgroundJob.ContinueJobWith<ADB>(rebootJob, adb => adb.Install(device.getSerialNumber(), app.InstallerPath));
+        }
+
         return Ok(new {});
     }
 }

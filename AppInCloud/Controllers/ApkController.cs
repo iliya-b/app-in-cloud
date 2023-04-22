@@ -41,7 +41,7 @@ public class ApkController : ControllerBase
     public IEnumerable<Models.MobileApp> Get()
     {
         var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext!.User);
-        return  _db.MobileApps.Where(f => f.UserId == userId).ToList();
+        return  _db.MobileApps.Where(f => f.UserId == userId).IgnoreAutoIncludes().ToList();
     }
 
 
@@ -111,9 +111,13 @@ public class ApkController : ControllerBase
         Data.ApplicationDbContext _db;
         public UserAppInstallationJob (ADB adb, Data.ApplicationDbContext db) => (_adb, _db) = (adb, db);
         public async Task InstallAndNotify(int appId, string filePath, string deviceSerial) {
-            await _adb.Install(deviceSerial, filePath);
+            var response = await _adb.Install(deviceSerial, filePath);
+
             var app = _db.MobileApps.Find(appId); // todo: handle not found case
-            app!.Status = AppStatuses.Ready;
+            app!.Status = response switch {
+                BridgeResponse.Success => AppStatuses.Ready,
+                _ => AppStatuses.Error,
+            };
             _db.MobileApps.Update(app);
             _db.SaveChanges();
         }

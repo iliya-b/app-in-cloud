@@ -12,6 +12,7 @@ using Hangfire.Storage.SQLite;
 using AppInCloud.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables(prefix: "");
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
@@ -45,6 +46,7 @@ builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddScoped<AppInCloud.Services.ICommandRunner, AppInCloud.Services.LocalCommandRunner>();
 builder.Services.AddScoped<AppInCloud.Services.ADB>();
 builder.Services.AddScoped<AppInCloud.Services.InstallationService>();
 builder.Services.AddScoped<AppInCloud.Services.CuttlefishService>();
@@ -57,8 +59,23 @@ builder.Services.AddHangfire(configuration => configuration
         // .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
-        .UseSQLiteStorage());
-builder.Services.AddHangfireServer();
+        .UseResultsInContinuations()
+        .UseFilter(new AutomaticRetryAttribute { Attempts = 0 })
+        .UseSQLiteStorage()
+);
+builder.Services.AddHangfireServer(x => 
+        {
+            x.ServerName = "cuttlefish";
+            x.Queues = new[] {"cuttlefish"};
+            x.WorkerCount = 1; // do not allow run multiple cuttlefish operations concurrently
+        });
+
+        
+builder.Services.AddHangfireServer(x =>
+        {
+            x.Queues = new[] {"default"};
+            x.WorkerCount = 3;
+        });
 
 var app = builder.Build();
 
@@ -130,6 +147,12 @@ app.UseEndpoints(endpoints => {
         endpoints.MapHangfireDashboard();
 
 });
+
+
+foreach (var c in builder.Configuration.AsEnumerable())
+{
+    Console.WriteLine(c.Key + " = " + c.Value);
+}
 
 app.MapControllerRoute(
     name: "default",

@@ -51,8 +51,7 @@ public class AppStreamController : ControllerBase
             return ("No device is available");
         }
         Models.Device device = user.Devices.First();
-        _adb.Serial = device.getSerialNumber();
-        await _adb.Start(app.PackageName);
+        await _adb.Start(device.getSerialNumber(), app.PackageName);
         
         return "/devices/" + app.DeviceId + "/files/client.html";
     }
@@ -62,6 +61,8 @@ public class AppStreamController : ControllerBase
     {
         public string device_id { get; set; }
     }
+
+    
     [HttpPost]
     [Route("/polled_connections")]
     public async Task<IActionResult> PolledConnection(DeviceRequest deviceRequest)

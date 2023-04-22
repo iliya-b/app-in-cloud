@@ -234,3 +234,5 @@ _Pvt_Extensions
 app.db*
 app.sqlite*
 Hangfire.db*
+
+*.env

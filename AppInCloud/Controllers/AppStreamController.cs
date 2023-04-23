@@ -42,18 +42,20 @@ public class AppStreamController : ControllerBase
     */
     [HttpGet]
     [Route("")]
-    public async Task<string> Get(int id)
+    public async Task<IActionResult> Get(int id)
     {
         var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
         var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
         var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
-        if(user.Devices.Count() == 0){
-            return ("No device is available");
+
+        Models.Device device = app.Device;
+        if(device is null || !user.Devices.Any(d => d.Id == device.Id)){
+            return Unauthorized("No device is available"); // no device or app assigned to a device to which user has no access
+                                                // e.g. if access was drawned
         }
-        Models.Device device = user.Devices.First();
         await _adb.Start(device.getSerialNumber(), app.PackageName);
         
-        return "/devices/" + app.DeviceId + "/files/client.html";
+        return Ok("/devices/" + app.DeviceId + "/files/client.html");
     }
 
 
@@ -75,7 +77,7 @@ public class AppStreamController : ControllerBase
         
         try	
         {
-            HttpResponseMessage response = await client.PostAsync("https://localhost:8532/polled_connections", new StringContent(JsonSerializer.Serialize(deviceRequest)));
+            HttpResponseMessage response = await client.PostAsync("https://localhost:" + (8442 + CuttlefishLaunchOptions.BaseNumber) + "/polled_connections", new StringContent(JsonSerializer.Serialize(deviceRequest)));
             response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync();
             return new ContentResult { Content = responseBody, ContentType = "application/json" };

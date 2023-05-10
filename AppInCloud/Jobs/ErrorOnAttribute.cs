@@ -1,9 +1,7 @@
 namespace AppInCloud.Jobs;
 using Hangfire.Common;
-using Hangfire.States;
 using Hangfire.Logging;
 using Hangfire.Server;
-using Hangfire.Client;
 
 public class ErrorOnAttribute : JobFilterAttribute, IServerFilter
 {

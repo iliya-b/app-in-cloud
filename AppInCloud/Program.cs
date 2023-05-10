@@ -49,7 +49,13 @@ builder.Services.AddRazorPages();
 builder.Services.AddScoped<AppInCloud.Services.ICommandRunner, AppInCloud.Services.LocalCommandRunner>();
 builder.Services.AddScoped<AppInCloud.Services.ADB>();
 builder.Services.AddScoped<AppInCloud.Services.InstallationService>();
-builder.Services.AddScoped<AppInCloud.Services.CuttlefishService>();
+
+builder.Services.AddScoped<AppInCloud.Services.CuttlefishService>( x => {
+    return new CuttlefishService(x.GetRequiredService<ICommandRunner>(), x.GetRequiredService<IConfiguration>()["Emulator:BasePath"]);
+});
+builder.Services.AddScoped<AppInCloud.Services.CuttlefishLegacyService>( x => {
+    return new CuttlefishLegacyService(x.GetRequiredService<ICommandRunner>(), x.GetRequiredService<IConfiguration>()["Emulator:LegacyBasePath"]);
+});
 builder.Services.AddScoped<AppInCloud.Services.AndroidService>();
 builder.Services.AddControllersWithViews().AddJsonOptions(options => {
     options.JsonSerializerOptions.Converters.Add (new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));

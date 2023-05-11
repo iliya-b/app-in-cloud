@@ -21,7 +21,7 @@ export class Login extends Component {
     const action = this.props.action;
     switch (action) {
       case LoginActions.Login:
-        this.login(this.getReturnUrl());
+        this.login();
         break;
       case LoginActions.LoginCallback:
         this.processLoginCallback();
@@ -64,20 +64,7 @@ export class Login extends Component {
   }
 
   async login(returnUrl) {
-    const state = { returnUrl };
-    const result = await authService.signIn(state);
-    switch (result.status) {
-      case AuthenticationResultStatus.Redirect:
-        break;
-      case AuthenticationResultStatus.Success:
-        await this.navigateToReturnUrl(returnUrl);
-        break;
-      case AuthenticationResultStatus.Fail:
-        this.setState({ message: result.message });
-        break;
-      default:
-        throw new Error(`Invalid status result ${result.status}.`);
-    }
+    await this.navigateToReturnUrl("/Account/Login");
   }
 
   async processLoginCallback() {
@@ -110,7 +97,7 @@ export class Login extends Component {
   }
 
   redirectToRegister() {
-    this.redirectToApiAuthorizationPath(`${ApplicationPaths.IdentityRegisterPath}?${QueryParameterNames.ReturnUrl}=${encodeURI(ApplicationPaths.Login)}`);
+    this.redirectToApiAuthorizationPath(`${ApplicationPaths.IdentityRegisterPath}`);
   }
 
   redirectToProfile() {

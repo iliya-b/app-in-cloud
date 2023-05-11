@@ -21,18 +21,16 @@ public class ApkController : ControllerBase
     private readonly ILogger<ApkController> _logger;
     private readonly ADB _adb;
     private readonly Data.ApplicationDbContext _db;
-    private readonly UserManager<Models.ApplicationUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly InstallationService _installationService;
     private readonly AndroidService _androidService;
 
-    public ApkController(ILogger<ApkController> logger, InstallationService installationService, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, UserManager<Models.ApplicationUser> userManager, AndroidService androidService)
+    public ApkController(ILogger<ApkController> logger, InstallationService installationService, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, AndroidService androidService)
     {
         _installationService = installationService;
         _logger = logger;
         _adb = adb;
         _db = db;
-        _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
         _androidService = androidService;
     }
@@ -40,17 +38,19 @@ public class ApkController : ControllerBase
     [Route("")]
     public IEnumerable<Models.MobileApp> Get()
     {
-        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext!.User);
-        return  _db.MobileApps.Where(f => f.UserId == userId).IgnoreAutoIncludes().ToList();
+        return  _db.MobileApps.Where(f => f.UserId == GetUser().Id).IgnoreAutoIncludes().ToList();
     }
 
+    private ApplicationUser GetUser() {
+        return _db.Users.Where(u => u.Email == _httpContextAccessor.HttpContext!.User.Identity!.Name).First();
+    }
 
     [HttpDelete]
     [Route("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext!.User);
-        var app = _db.MobileApps.Where(f => f.Id == id && f.UserId == userId).Include(f => f.Device).First();
+        var user = GetUser();
+        var app = _db.MobileApps.Where(f => f.Id == id && f.UserId == user.Id).Include(f => f.Device).First();
         try{
             await _adb.Uninstall(app.Device.getSerialNumber(), app.PackageName);
         }catch(Exception e){
@@ -70,7 +70,7 @@ public class ApkController : ControllerBase
     [Route("Upload")]
     public async Task<IActionResult> Upload(IFormFile file, [FromServices]IServiceScopeFactory scopeFactory)
     {
-        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext!.User);
+        var userId = GetUser().Id;
         var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
         if(user.Devices.Count() == 0){
             return NotFound("No device is available");

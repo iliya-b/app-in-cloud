@@ -10,7 +10,6 @@ const AppRoutes = [
   },
   {
     index: true,
-    requireAuth: true,
     element: <Apps />
   },
   {
@@ -19,6 +18,7 @@ const AppRoutes = [
     element: <AppStream />,
 
   },
+
   ...ApiAuthorzationRoutes
 ];
 

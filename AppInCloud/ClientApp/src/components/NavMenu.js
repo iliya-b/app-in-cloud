@@ -2,7 +2,7 @@ import React, { Component, useEffect, useState } from 'react';
 import { Collapse, Navbar, NavbarBrand, NavbarToggler, NavItem, NavLink } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { LoginMenu } from './api-authorization/LoginMenu';
-import authService from './api-authorization/AuthorizeService'
+import authService from './api-authorization/AuthService'
 import './NavMenu.css';
 
 export const NavMenu = () =>  {
@@ -12,7 +12,7 @@ export const NavMenu = () =>  {
   const [isAdmin, setIsAdmin] = useState(false)  
 
   useEffect(() => {
-    authService.getUser().then(r => r.role === "Admin" && setIsAdmin(true))
+    authService.getUser().then(r => setIsAdmin(r.isAdmin))
   }, [])
 
   const toggleNavbar = () =>  collapse(r => !r)

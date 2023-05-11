@@ -18,6 +18,11 @@ const context =  [
   "/_configuration",
   "/.well-known",
   "/Identity",
+  "/Account",
+  "/lib/",
+  "/js/",
+  "/css/",
+  "/CookieSample.styles.css",
   "/connect", 
   "/ApplyDatabaseMigrations",
   "/_framework"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import authService from './api-authorization/AuthorizeService'
+import authService from './api-authorization/AuthService'
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import styles from '../styles/Apps.module.css' 
 
@@ -34,7 +34,7 @@ const AppsTable = ({apps, deleteAction}) => {
 }
 
 const GeneralAppList = ({role}) => {
-
+  console.log("test!!")
   const [data, setData] = useState([])
   const [file, setFile] = useState()
   const [reloadCounter, setReloadCounter] = useState(0)

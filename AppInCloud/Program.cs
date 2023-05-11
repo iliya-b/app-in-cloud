@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.EntityFrameworkCore;
 using AppInCloud.Data;
 using AppInCloud.Models;
@@ -10,6 +7,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Hangfire;
 using Hangfire.Storage.SQLite;
 using AppInCloud.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "");
@@ -24,21 +23,18 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddRoles<IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+// builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+//     .AddRoles<IdentityRole>()
+//     .AddEntityFrameworkStores<ApplicationDbContext>();
 
-builder.Services.AddIdentityServer()
-    .AddApiAuthorization<ApplicationUser, ApplicationDbContext>()
-    .AddProfileService<ProfileService>();
+// builder.Services.AddIdentityServer()
+//     .AddApiAuthorization<ApplicationUser, ApplicationDbContext>()
+//     .AddProfileService<ProfileService>();
 
-builder.Services.AddAuthentication(options => { // todo: why it's really required when jwt is used?
-            options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
-            options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
-        })
-    .AddIdentityServerJwt();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie();
 builder.Services.AddAuthorization(options => {
     options.AddPolicy("authorized", p => p.RequireAuthenticatedUser());
+    options.AddPolicy("admin", p => p.RequireClaim(ClaimTypes.Role, "Admin"));
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -102,50 +98,49 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
-app.UseIdentityServer();
 app.UseAuthorization();
 
-using (IServiceScope scope = app.Services.CreateScope()) {
-        var RoleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-        var UserManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        string[] roleNames = { "Admin", "Manager", "Member" };
-        IdentityResult roleResult;
+// using (IServiceScope scope = app.Services.CreateScope()) {
+//         var RoleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+//         var UserManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+//         string[] roleNames = { "Admin", "Manager", "Member" };
+//         IdentityResult roleResult;
 
-        foreach (var roleName in roleNames)
-        {
-            var roleExist = await RoleManager.RoleExistsAsync(roleName);
-            if (!roleExist)
-            {
-                roleResult = await RoleManager.CreateAsync(new IdentityRole(roleName));
-            }
-        }
+//         foreach (var roleName in roleNames)
+//         {
+//             var roleExist = await RoleManager.RoleExistsAsync(roleName);
+//             if (!roleExist)
+//             {
+//                 roleResult = await RoleManager.CreateAsync(new IdentityRole(roleName));
+//             }
+//         }
 
-        //Here you could create a super user who will maintain the web app
-        var poweruser = new ApplicationUser
-        {
+//         //Here you could create a super user who will maintain the web app
+//         var poweruser = new ApplicationUser
+//         {
 
-            UserName = app.Configuration["AppInCloud:DefaultAdminEmail"],
-            Email = app.Configuration["AppInCloud:DefaultAdminEmail"],
-            EmailConfirmed = true
-        };
+//             UserName = app.Configuration["AppInCloud:DefaultAdminEmail"],
+//             Email = app.Configuration["AppInCloud:DefaultAdminEmail"],
+//             EmailConfirmed = true
+//         };
 
-        string userPWD = app.Configuration["AppInCloud:DefaultAdminPassword"];
-        var _user = await UserManager.FindByEmailAsync(app.Configuration["AppInCloud:DefaultAdminEmail"]);
+//         string userPWD = app.Configuration["AppInCloud:DefaultAdminPassword"];
+//         var _user = await UserManager.FindByEmailAsync(app.Configuration["AppInCloud:DefaultAdminEmail"]);
 
-       if(_user == null)
-       {
-            var createPowerUser = await UserManager.CreateAsync(poweruser, userPWD);
-            if (createPowerUser.Succeeded)
-            {
-                await UserManager.AddToRoleAsync(poweruser, "Admin");
-                Console.WriteLine("creating admin user");
-            }else{
-                Console.WriteLine("failed creating admin user: {0}", createPowerUser.Errors.First().Description);
-            }
-       }else{
-            Console.WriteLine("not creating admin user");
-       }
-}
+//        if(_user == null)
+//        {
+//             var createPowerUser = await UserManager.CreateAsync(poweruser, userPWD);
+//             if (createPowerUser.Succeeded)
+//             {
+//                 await UserManager.AddToRoleAsync(poweruser, "Admin");
+//                 Console.WriteLine("creating admin user");
+//             }else{
+//                 Console.WriteLine("failed creating admin user: {0}", createPowerUser.Errors.First().Description);
+//             }
+//        }else{
+//             Console.WriteLine("not creating admin user");
+//        }
+// }
 
 
 app.UseEndpoints(endpoints => {

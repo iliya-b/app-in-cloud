@@ -8,7 +8,7 @@ using AppInCloud.Services;
 
 namespace AppInCloud.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Policy = "admin")]
 [Route("/api/v1/[controller]")]
 [ApiController]
 public class AdminController : ControllerBase
@@ -17,18 +17,18 @@ public class AdminController : ControllerBase
     private readonly ILogger<AdminController> _logger;
     private readonly ADB _adb;
     private readonly Data.ApplicationDbContext _db;
-    private readonly UserManager<Models.ApplicationUser> _userManager;
+    // private readonly UserManager<Models.ApplicationUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly InstallationService _installationService;
     private readonly AndroidService _androidService;
 
-    public AdminController(ILogger<AdminController> logger, InstallationService installationService, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, UserManager<Models.ApplicationUser> userManager, AndroidService androidService)
+    public AdminController(ILogger<AdminController> logger, InstallationService installationService, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, AndroidService androidService)
     {
         _installationService = installationService;
         _logger = logger;
         _adb = adb;
         _db = db;
-        _userManager = userManager;
+        // _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
         _androidService = androidService;
     }
@@ -74,7 +74,7 @@ public class AdminController : ControllerBase
     [Route("DefaultApps/{id}")]
     public IActionResult deleteDefaultApps(int id)
     {
-        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext!.User);
+        // var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext!.User);
         var app = _db.DefaultApps.Find(id);
         _db.DefaultApps.Remove(app);
         _db.SaveChanges();

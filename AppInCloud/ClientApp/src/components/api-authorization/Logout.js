@@ -65,6 +65,8 @@ export class Logout extends Component {
   }
 
   async logout(returnUrl) {
+    await this.navigateToReturnUrl("/Account/Login");
+    return;
     const state = { returnUrl };
     const isauthenticated = await authService.isAuthenticated();
     if (isauthenticated) {

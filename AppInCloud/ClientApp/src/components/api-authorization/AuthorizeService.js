@@ -22,7 +22,8 @@ export class AuthorizeService {
     }
 
     await this.ensureUserManagerInitialized();
-    const user = await this.userManager.getUser();
+    const user1 = await this.userManager.getUser();
+    const user = await (await this.fetch("/api/v1/user", {})).json()
     return user && user.profile;
   }
 
@@ -34,69 +35,13 @@ export class AuthorizeService {
 
   async fetch(){
     const args = arguments
-    const token = await authService.getAccessToken();
+    // const token = await authService.getAccessToken();
     args[1] = args[1] === undefined ? {headers: {}} : args[1];
     args[1].headers = args[1].headers === undefined ? {} : args[1].headers;
-    args[1].headers.Authorization = `Bearer ${token}`;
+    // args[1].headers.Authorization = `Bearer ${token}`;
     return fetch.apply(null, args);
   }
-  // We try to authenticate the user in three different ways:
-  // 1) We try to see if we can authenticate the user silently. This happens
-  //    when the user is already logged in on the IdP and is done using a hidden iframe
-  //    on the client.
-  // 2) We try to authenticate the user using a PopUp Window. This might fail if there is a
-  //    Pop-Up blocker or the user has disabled PopUps.
-  // 3) If the two methods above fail, we redirect the browser to the IdP to perform a traditional
-  //    redirect flow.
-  async signIn(state) {
-    await this.ensureUserManagerInitialized();
-    try {
-      const silentUser = await this.userManager.signinSilent(this.createArguments());
-      this.updateState(silentUser);
-      return this.success(state);
-    } catch (silentError) {
-      // User might not be authenticated, fallback to popup authentication
-      console.log("Silent authentication error: ", silentError);
-
-      try {
-        if (this._popUpDisabled) {
-          throw new Error('Popup disabled. Change \'AuthorizeService.js:AuthorizeService._popupDisabled\' to false to enable it.')
-        }
-
-        const popUpUser = await this.userManager.signinPopup(this.createArguments());
-        this.updateState(popUpUser);
-        return this.success(state);
-      } catch (popUpError) {
-        if (popUpError.message === "Popup window closed") {
-          // The user explicitly cancelled the login action by closing an opened popup.
-          return this.error("The user closed the window.");
-        } else if (!this._popUpDisabled) {
-          console.log("Popup authentication error: ", popUpError);
-        }
-
-        // PopUps might be blocked by the user, fallback to redirect
-        try {
-          await this.userManager.signinRedirect(this.createArguments(state));
-          return this.redirect();
-        } catch (redirectError) {
-          console.log("Redirect authentication error: ", redirectError);
-          return this.error(redirectError);
-        }
-      }
-    }
-  }
-
-  async completeSignIn(url) {
-    try {
-      await this.ensureUserManagerInitialized();
-      const user = await this.userManager.signinCallback(url);
-      this.updateState(user);
-      return this.success(user && user.state);
-    } catch (error) {
-      console.log('There was an error signing in: ', error);
-      return this.error('There was an error signing in.');
-    }
-  }
+  
 
   // We try to sign out the user in two different ways:
   // 1) We try to do a sign-out using a PopUp Window. This might fail if there is a

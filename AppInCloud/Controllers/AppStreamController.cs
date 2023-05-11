@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AppInCloud.Models;
 using AppInCloud.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,6 @@ public class AppStreamController : ControllerBase
     private readonly ILogger<AppStreamController> _logger;
     private readonly ADB _adb;
     private readonly Data.ApplicationDbContext _db;
-    private readonly UserManager<Models.ApplicationUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     static readonly HttpClient client = new HttpClient( 
         new HttpClientHandler {
@@ -25,16 +25,18 @@ public class AppStreamController : ControllerBase
         }
     );
 
-    public AppStreamController(ILogger<AppStreamController> logger, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor, UserManager<Models.ApplicationUser> userManager)
+    public AppStreamController(ILogger<AppStreamController> logger, ADB adb, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor)
     {
         _logger = logger;
         _adb = adb;
         _db = db;
-        _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
 
     }   
  
+    private ApplicationUser GetUser() {
+        return _db.Users.Where(u => u.Email == _httpContextAccessor.HttpContext!.User.Identity!.Name).First();
+    }
 
  /**
     Start application and return web rtc parameters
@@ -44,7 +46,7 @@ public class AppStreamController : ControllerBase
     [Route("")]
     public async Task<IActionResult> Get(int id)
     {
-        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
+        var userId = GetUser().Id;
         var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
         var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
 
@@ -69,7 +71,7 @@ public class AppStreamController : ControllerBase
     [Route("/polled_connections")]
     public async Task<IActionResult> PolledConnection(DeviceRequest deviceRequest)
     {
-        var userId = _userManager.GetUserId(_httpContextAccessor.HttpContext.User);
+        var userId = GetUser().Id;
         bool allowed = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First().Devices.Exists(f => f.Id == deviceRequest.device_id);
         if(!allowed) {
             return new JsonResult("error");

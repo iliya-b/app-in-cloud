@@ -6,7 +6,8 @@ import { ApplicationPaths, LoginActions, LogoutActions } from './ApiAuthorizatio
 const ApiAuthorizationRoutes = [
   {
     path: ApplicationPaths.Login,
-    element: loginAction(LoginActions.Login)
+    element: loginAction(LoginActions.Login),
+
   },
   {
     path: ApplicationPaths.LoginFailed,

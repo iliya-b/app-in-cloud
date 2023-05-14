@@ -1,15 +1,14 @@
 import ApiAuthorzationRoutes from './components/api-authorization/ApiAuthorizationRoutes';
 import { Apps } from "./components/Apps";
 import { AppStream,  } from "./components/AppStream";
-import { Home } from "./components/Home";
+import { Admin } from "./components/Admin";
 
 const AppRoutes = [
   {
     path: '/admin',
-    element: <Home />
+    element: <Admin />
   },
   {
-    index: true,
     element: <Apps />
   },
   {

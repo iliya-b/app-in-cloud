@@ -34,7 +34,6 @@ const AppsTable = ({apps, deleteAction}) => {
 }
 
 const GeneralAppList = ({role}) => {
-  console.log("test!!")
   const [data, setData] = useState([])
   const [file, setFile] = useState()
   const [reloadCounter, setReloadCounter] = useState(0)

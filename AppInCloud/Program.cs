@@ -35,13 +35,16 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization(options => {
     options.AddPolicy("authorized", p => p.RequireAuthenticatedUser());
     options.AddPolicy("admin", p => p.RequireClaim(ClaimTypes.Role, "Admin"));
+
 });
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 builder.Services.AddControllersWithViews();
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages(options => {
+    // options.Conventions.AuthorizePage("/Account/Register", "registeration_enabled");
+});
 builder.Services.AddScoped<AppInCloud.Services.ICommandRunner, AppInCloud.Services.LocalCommandRunner>();
 builder.Services.AddScoped<AppInCloud.Services.ADB>();
 builder.Services.AddScoped<AppInCloud.Services.InstallationService>();

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Caching.Memory;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
@@ -14,11 +15,14 @@ namespace AppInCloud.Pages.Account
     {
         private readonly ILogger<LoginModel> _logger;
         private readonly ApplicationDbContext _db;
+        private readonly IMemoryCache _cache;
+        private static string REGISTRATION_ENABLED_CACHE_KEY = "registration_enabled";
 
-        public RegisterModel(ILogger<LoginModel> logger, ApplicationDbContext db)
+        public RegisterModel(ILogger<LoginModel> logger, IMemoryCache cache, ApplicationDbContext db)
         {
             _logger = logger;
             _db = db;
+            _cache = cache;
         }
 
         [BindProperty]
@@ -45,9 +49,14 @@ namespace AppInCloud.Pages.Account
             public string PasswordRepeat { get; set; }
         }
 
-        #region snippet2
-        public async Task OnGetAsync(string returnUrl = null)
+        private bool isRegistrationEnabled() {
+            return _cache.TryGetValue(REGISTRATION_ENABLED_CACHE_KEY, out Boolean registrationEnabled) && registrationEnabled;
+        }
+
+        public async Task<IActionResult> OnGetAsync(string returnUrl = null)
         {
+            if(!isRegistrationEnabled()) return LocalRedirect("/");
+            ReturnUrl = returnUrl;
             if (!string.IsNullOrEmpty(ErrorMessage))
             {
                 ModelState.AddModelError(string.Empty, ErrorMessage);
@@ -56,14 +65,13 @@ namespace AppInCloud.Pages.Account
             // Clear the existing external cookie
             await HttpContext.SignOutAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme);
-
-            ReturnUrl = returnUrl;
+            return Page();
         }
-        #endregion
 
-        #region snippet1
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
+            if(!isRegistrationEnabled()) return LocalRedirect("/");
+
             ReturnUrl = returnUrl;
 
             if (ModelState.IsValid)
@@ -138,6 +146,6 @@ namespace AppInCloud.Pages.Account
             // Something failed. Redisplay the form.
             return Page();
         }
-        #endregion
+
     }
 }

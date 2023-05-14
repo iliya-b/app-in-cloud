@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using AppInCloud.Models;
 using Hangfire;
 using AppInCloud.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace AppInCloud.Controllers;
 
@@ -28,7 +29,6 @@ public class AdminController : ControllerBase
         _logger = logger;
         _adb = adb;
         _db = db;
-        // _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
         _androidService = androidService;
     }
@@ -109,24 +109,30 @@ public class AdminController : ControllerBase
            
         return Ok(new { success=true });
     }
-
-
-    [HttpPost]
-    [Route("Devices/{deviceId}/Assign")]
-    public IActionResult assignDevice(string deviceId, [FromForm] string userEmail, [FromForm] bool unassign ){
-        var device = _db.Devices.Where(d => d.Id == deviceId).Include(d => d.Users).First();
+    private IActionResult assignDevice(Device device, ApplicationUser user, bool unassign)
+    {
         if(unassign) {
-            device!.Users.Remove(device!.Users.Where(u => u.Email == userEmail).First());
+            device!.Users.Remove(user); 
         }else{
-            var user = _db.Users.Where(u => u.Email == userEmail).First();
-            device!.Users.Add(user!);
+            device!.Users.Add(user);
         }
         _db.Devices.Update(device);
         _db.SaveChanges();
-        return Ok(new {});
+        return Ok();
     }
 
+    [HttpPost]
+    [Route("Devices/{deviceId}/Assign")]
+    public IActionResult assignDevice(string deviceId, [FromForm] [EmailAddress] string userEmail, [FromForm] bool unassign ){
 
+        return (
+            _db.Devices.Where(d => d.Id == deviceId).Include(d => d.Users).FirstOrDefault(), 
+            _db.Users.Where(u => u.Email == userEmail).FirstOrDefault()
+        ) switch {
+            (null, _) or (_, null) => NotFound(new {Errors = new [] {"device or user not found"}}),
+            (var device, var user) => assignDevice(device, user, unassign)
+        };
+    }
 
     private string? restartJob(IEnumerable<Device> devices){
         // var devices = _db.Devices.Where(d => d.IsActive && d.Status == Device.Statuses.ENABLE).ToList();

@@ -4,7 +4,7 @@ import _ from 'lodash'
 import {Modal} from 'bootstrap'
 import { DataTable } from './DataTable';
 
-const AddDeviceWindow = ({targets, onClose}) => {
+const AddDeviceWindow = ({data, onClose}) => {
 
     const ref = React.useRef(null);
     React.useEffect(() => {
@@ -19,7 +19,7 @@ const AddDeviceWindow = ({targets, onClose}) => {
       }
     }, [ref]);
   
-    const [target, setTarget] = useState(_.keys(targets)[0])
+    const [target, setTarget] = useState(_.keys(data.targets)[0])
     const [ram, setRam] = useState(1024)
     const [error, setError] = useState("")
     
@@ -48,7 +48,7 @@ const AddDeviceWindow = ({targets, onClose}) => {
         <div className="modal-body">
           <label className='form-label w-100'>Target OS
             <select className="form-select" aria-label="os target" value={target} onChange={e => setTarget(e.target.value)}>
-              {_.map(targets, (label,i) => <option key={i} value={i}>{label}</option>)}
+              {_.map(data.targets, (label,i) => <option key={i} value={i}>{label}</option>)}
             </select>
           </label>
           <label className="form-label w-100">Memory
@@ -89,11 +89,28 @@ const AddDeviceWindow = ({targets, onClose}) => {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},   
       }).then(handleResponse);
     }
-  
+    const switchDevice = () => {
+      fetch('api/v1/admin/devices/' + deviceId + '/switch' , {
+        method: 'post', 
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},   
+      }).then(handleResponse);
+    }
     return  <div  className='btn-group  ' role="group">
               <button className='btn btn-sm btn-outline-danger' onClick={() => reset()}>
                 Reset
               </button>
+              {entry.isActive && entry.status === "enable" && <button title='device is on' className='btn btn-sm btn-outline-success' onClick={() => switchDevice()}>
+                ON
+              </button>}
+              {entry.isActive && entry.status === "disable" && <button disabled title='device is turning off' className='btn btn-sm btn-outline-success'>
+                TURNING OFF...
+              </button>}
+              {!entry.isActive && entry.status === "disable" && <button title='device is off' className='btn btn-sm btn-outline-danger' onClick={() => switchDevice()}>
+                OFF
+              </button>}
+              {!entry.isActive && entry.status === "enable" && <button title='device is turning on' className='btn btn-sm btn-outline-danger' disabled>
+                TURNING ON...
+              </button>}
               <button className='btn btn-sm btn-outline-danger' onClick={() => deactivate()}>
                 <i className="bi bi-trash-fill"></i>
               </button>

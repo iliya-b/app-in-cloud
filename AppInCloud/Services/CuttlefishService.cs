@@ -4,8 +4,8 @@ namespace AppInCloud.Services;
 
 public class CuttlefishLaunchOptions {
     public static int BaseNumber;
-    public int InstanceBaseNumber = 1;
-    public int? InstancesNumber = 1; // InstancesNumber and InstanceNumbers are mutually excluding
+    public int? InstanceBaseNumber = 1;
+    public int? InstancesNumber = 1; // (InstanceBaseNumber, InstancesNumber) and InstanceNumbers are mutually excluding
     public IEnumerable<int>? InstanceNumbers  = null;
     public IEnumerable<int> Memory  = new int[]{1024, 1024};
 
@@ -59,9 +59,9 @@ public class CuttlefishService
     }
 
 
-    public async Task<object> Start(int N){
-        return await run("powerwash_cvd", new []{"--instance_num", N.ToString()});
-    }
+    // public async Task<object> Start(int N){
+    //     return await run("powerwash_cvd", new []{"--instance_num", N.ToString()});
+    // }
 
     public async Task<object> Launch(CuttlefishLaunchOptions options){
         if (options.Memory.Count() > 1 && options.Memory.Count() != options.InstancesNumber){
@@ -77,18 +77,19 @@ public class CuttlefishService
             "launch_cvd", 
             new string[]{
                 "--daemon", 
-                "--base_instance_num", options.InstanceBaseNumber.ToString(), 
                 "-memory_mb",  string.Join(',', options.Memory),
             }.Concat((options.InstancesNumber, options.InstanceNumbers) switch {
                 (null, null) or (not null, not null) or (0, _) => throw new Exception(),
                 (null, var instanceNumbers) =>  new string[] {"--instance_nums"}.Concat(instanceNumbers.Select(n => n.ToString())),
-                (var instancesNumber , null) =>  new string[] {"--num_instances", ""+instancesNumber},
+                (var instancesNumber , null) =>  new string[] {"--num_instances", ""+instancesNumber, "--base_instance_num", options.InstanceBaseNumber.ToString()},
             })
         );
     }
 }
 
 
+[Hangfire.Queue("cuttlefish")]
+[ErrorOn(type: typeof(CommandResult.Error))]
 public class CuttlefishLegacyService
 {
     private readonly string _basePath;
@@ -101,6 +102,8 @@ public class CuttlefishLegacyService
         return new CuttlefishService(_commandRunner, _basePath + instanceNumber).Powerwash(instanceNumber); 
         // path is like ~/cuttlefish/cf12
     }
+
+    [Hangfire.AutomaticRetry(Attempts = 0, OnAttemptsExceeded = Hangfire.AttemptsExceededAction.Delete)]
     public Task Stop(int instanceNumber) {
         return new CuttlefishService(_commandRunner, _basePath + instanceNumber).Stop(); 
         // path is like ~/cuttlefish/cf12

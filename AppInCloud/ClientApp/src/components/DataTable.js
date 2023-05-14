@@ -1,20 +1,9 @@
 import React, { useState, useEffect, Component } from 'react';
-import { DefaultApps } from './Apps';
+
 import _ from 'lodash'
-import {Modal} from 'bootstrap'
 
 
 export const DataTable = ({ fields, customFieldRenderers, path, Actions, TopInfo, CreateWindow }) => {
-
-
-    const createAction = () => {
-
-    }
-    const updateAction = () => {
-
-    }
-
-
     const [data, setData] = useState({
         count: 0,
         list: [],
@@ -39,7 +28,7 @@ export const DataTable = ({ fields, customFieldRenderers, path, Actions, TopInfo
     const handleResponse = r => {
         if(r.status !== 200){
             r.json().then(data => {
-              setError(data.errors && _.join(_.map(data.errors, v => v.length && v[0]), ','))
+              setError(data.errors && _.join(_.map(data.errors, v => typeof v === 'string'  ? v : (v.length && v[0])), ','))
             }).catch(t => {
               // todo logging
             });

@@ -97,7 +97,7 @@ const TopInfo = ({data, handleResponse}) => {
     if(data.registrationEnabled === undefined) { // if not loaded yet
         return <></>
     }
-    return <tr style={{cursor: 'pointer'}}><td onClick={toggleRegistration}>Registration {data.registrationEnabled ? <span className="badge bg-success">enabled <i class="bi bi-toggle-on"></i></span> : <span className="badge bg-danger">disabled <i class="bi bi-toggle-off"></i></span>}</td></tr>
+    return <tr style={{cursor: 'pointer'}}><td onClick={toggleRegistration}>Registration {data.registrationEnabled ? <span className="badge bg-success">enabled <i className="bi bi-toggle-on"></i></span> : <span className="badge bg-danger">disabled <i className="bi bi-toggle-off"></i></span>}</td></tr>
 }
 export const UserList = () => {
 

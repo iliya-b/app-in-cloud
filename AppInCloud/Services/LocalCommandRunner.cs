@@ -32,7 +32,6 @@ public class LocalCommandRunner: ICommandRunner {
             cmd.Start();
             cmdExited.Task.Wait();
 
-            Console.WriteLine(cmd.StandardOutput.ReadLine());
             if(cmd.ExitCode != 0) {
                 return new CommandResult.Error(cmd.ExitCode, new[]{cmd.StandardOutput.ReadLine()});
             }

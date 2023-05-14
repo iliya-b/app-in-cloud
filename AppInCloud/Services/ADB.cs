@@ -50,7 +50,7 @@ public class ADB
         public async Task<bool> HealthCheck(string deviceSerial){
             var result = await run(deviceSerial, "shell",  new[]{"echo", "test"});
             return result switch {
-                CommandResult.Success(var output) => output.First() == "test",
+                CommandResult.Success(var output) => output.FirstOrDefault() == "test",
                 CommandResult.Error(int code, var output) => false,
                 _ => false
             };

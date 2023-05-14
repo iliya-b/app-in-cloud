@@ -40,9 +40,10 @@ public class Device
         var nums = devices.Select(d => d.getCuttlefishNumber());
         var rams = devices.Select(d => d.Memory);
         return new CuttlefishLaunchOptions {
+            InstancesNumber = null,
             InstanceNumbers = nums, 
             Memory = rams,
-            InstanceBaseNumber = CuttlefishLaunchOptions.getBaseNumber(supportedTarget)
+            InstanceBaseNumber = null
         };
     }
     public static CuttlefishLaunchOptions? GetLaunchOptions (Device device) {

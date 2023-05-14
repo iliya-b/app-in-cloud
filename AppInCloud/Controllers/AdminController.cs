@@ -50,8 +50,14 @@ public class AdminController : ControllerBase
         var list =  _db.Devices
             .Where(d => d.IsActive)
             .Include(f => f.Users)
-            .Select(d => new {Id=d.Id, Target=d.Target, Users = d.Users.Select(u => u.Email)})
-            .ToList(); 
+            .Select(d => new {Id=d.Id, Status=d.Status, Serial=d.getSerialNumber(), Target=d.Target, Users = d.Users.Select(u => u.Email)})
+            .ToList()
+            .Select(d => { // todo check the devices concurrently
+                var check = _adb.HealthCheck(d.Serial);
+                check.Wait();
+                return new {Id=d.Id, Status=d.Status, Target=d.Target, Users=d.Users, IsActive = check.Result};
+            }); 
+            
         return Ok(new {
             Count=tasksCount(),
             List=list,
@@ -175,8 +181,7 @@ public class AdminController : ControllerBase
     [HttpPost]
     [Route("Devices/Add")]
     public IActionResult createDevice([FromForm] string target, [FromForm] int memory){
-
-        if(!canRunTask()) return UnprocessableEntity("Cannot add/remove devices: running other tasks");
+        if(!canRunTask()) return UnprocessableEntity(new { Errors = new [] {"Cannot handle this device now: running other tasks"}});
         if(target != Device.Targets._12_x86_64.ToString() && target != Device.Targets._13_x86_64.ToString()) return UnprocessableEntity("Invalid target");
         var chosenTarget = Device.ParseTarget(target);
         Device? availableDevice = _db.Devices.Where(d => !d.IsActive).Where(d => d.Target == chosenTarget).FirstOrDefault();
@@ -247,7 +252,7 @@ public class AdminController : ControllerBase
     [HttpPost]
     [Route("Devices/{deviceId}/switch")]
     public async Task<IActionResult> switchDevice(string deviceId){
-        if(!canRunTask()) return UnprocessableEntity("Cannot handle this device now: running other tasks");
+        if(!canRunTask()) return UnprocessableEntity(new { Errors = new [] {"Cannot handle this device now: running other tasks"}});
         var device = _db.Devices.Where(d => d.Id == deviceId).First();
         var N = device.getCuttlefishNumber();
         var isOn = await _adb.HealthCheck(device.getSerialNumber());
@@ -265,14 +270,14 @@ public class AdminController : ControllerBase
             // for android 12 we can stop/launch just the related instance
         }else if(device.Target == Device.Targets._13_x86_64){
             restartJob(_db.Devices.Where(d => d.IsActive && d.Status == Device.Statuses.ENABLE));
-            // for android 13 we need to restart all cluster
+            // for android 13 we need to restart a whole cluster
         }else return UnprocessableEntity();
         return Ok();
     }
     [HttpPost]
     [Route("Devices/{deviceId}/Reset")]
     public IActionResult resetDevice(string deviceId){
-        if(!canRunTask()) return UnprocessableEntity("Cannot handle this device now: running other tasks");
+        if(!canRunTask()) return UnprocessableEntity(new { Errors = new [] {"Cannot handle this device now: running other tasks"}});
         var device = _db.Devices.Where(d => d.Id == deviceId).First();
         var deviceNumber = device.getCuttlefishNumber();
         string resetJob;

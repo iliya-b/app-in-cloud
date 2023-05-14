@@ -187,6 +187,7 @@ public class AdminController : ControllerBase
         Device? availableDevice = _db.Devices.Where(d => !d.IsActive).Where(d => d.Target == chosenTarget).FirstOrDefault();
         if(availableDevice is null)  return NotFound();
         availableDevice.IsActive = true;
+        availableDevice.Memory = memory >= 512 ? memory : 1536;
         _db.Devices.Update(availableDevice);
         _db.SaveChanges();
 

@@ -64,7 +64,10 @@ public class CuttlefishService
     // }
 
     public async Task<object> Launch(CuttlefishLaunchOptions options){
-        if (options.Memory.Count() > 1 && options.Memory.Count() != options.InstancesNumber){
+        if (
+            options.Memory.Count() > 1 && options.InstancesNumber is not null && options.Memory.Count() != options.InstancesNumber 
+            ||
+            options.Memory.Count() > 1 && options.InstanceNumbers is not null && options.Memory.Count() != options.InstanceNumbers.Count()){
             /**
                 case memory = [] -> use system defaults
                 case memory = [1024] -> use 1024 mb RAM for all devices

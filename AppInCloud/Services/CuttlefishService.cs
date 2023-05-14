@@ -83,7 +83,7 @@ public class CuttlefishService
                 "-memory_mb",  string.Join(',', options.Memory),
             }.Concat((options.InstancesNumber, options.InstanceNumbers) switch {
                 (null, null) or (not null, not null) or (0, _) => throw new Exception(),
-                (null, var instanceNumbers) =>  new string[] {"--instance_nums"}.Concat(instanceNumbers.Select(n => n.ToString())),
+                (null, var instanceNumbers) =>  new string[] {"--instance_nums", string.Join(',', instanceNumbers.Select(n => n.ToString()))},
                 (var instancesNumber , null) =>  new string[] {"--num_instances", ""+instancesNumber, "--base_instance_num", options.InstanceBaseNumber.ToString()},
             })
         );

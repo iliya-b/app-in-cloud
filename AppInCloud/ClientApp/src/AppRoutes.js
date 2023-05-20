@@ -9,6 +9,7 @@ const AppRoutes = [
     element: <Admin />
   },
   {
+    path: '/',
     element: <Apps />
   },
   {

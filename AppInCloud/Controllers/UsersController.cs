@@ -44,8 +44,8 @@ public class UsersController : ControllerBase
 
         if (!_cache.TryGetValue(REGISTRATION_ENABLED_CACHE_KEY, out Boolean registrationEnabled))
         {
-            _cache.Set(REGISTRATION_ENABLED_CACHE_KEY, false);
-            registrationEnabled = false;
+            _cache.Set(REGISTRATION_ENABLED_CACHE_KEY, true);
+            registrationEnabled = true;
         }
 
         return registrationEnabled;

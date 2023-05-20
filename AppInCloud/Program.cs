@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Hangfire;
-using Hangfire.Storage.SQLite;
+using Hangfire.PostgreSql;
 using AppInCloud.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
@@ -20,7 +20,7 @@ builder.Services.AddReverseProxy()
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+    options.UseNpgsql(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 // builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -60,14 +60,6 @@ builder.Services.AddControllersWithViews().AddJsonOptions(options => {
     options.JsonSerializerOptions.Converters.Add (new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 });
 
-builder.Services.AddHangfire(configuration => configuration
-        // .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UseResultsInContinuations()
-        .UseFilter(new AutomaticRetryAttribute { Attempts = 0 })
-        .UseSQLiteStorage()
-);
 builder.Services.AddHangfireServer(x => 
         {
             x.ServerName = "cuttlefish";
@@ -82,6 +74,17 @@ builder.Services.AddHangfireServer(x =>
             x.WorkerCount = 3;
         });
 
+builder.Services.AddHangfire(configuration => configuration
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseResultsInContinuations()
+        .UseFilter(new AutomaticRetryAttribute { Attempts = 0 })
+        .UsePostgreSqlStorage(connectionString, new PostgreSqlStorageOptions()
+                {
+                    PrepareSchemaIfNecessary = true,
+                    SchemaName = "schema"
+                })
+);
 var app = builder.Build();
 
 app.UseHangfireDashboard();
@@ -102,6 +105,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
 
 // using (IServiceScope scope = app.Services.CreateScope()) {
 //         var RoleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();

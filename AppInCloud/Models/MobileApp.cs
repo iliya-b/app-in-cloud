@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +26,8 @@ public class MobileApp
 
     public AppTypes Type { get; set; }
 
+    [DataType(DataType.Date)]
+    [Column(TypeName = "Date")]   
     public DateTime CreatedTimestamp { get; set; }
     public string DeviceId { get; set; }
     public Device Device {get; set; } = null!;

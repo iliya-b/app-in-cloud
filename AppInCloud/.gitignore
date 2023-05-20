@@ -236,3 +236,5 @@ app.sqlite*
 Hangfire.db*
 
 *.env
+
+

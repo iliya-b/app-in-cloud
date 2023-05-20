@@ -50,7 +50,7 @@ namespace AppInCloud.Pages.Account
         }
 
         private bool isRegistrationEnabled() {
-            return _cache.TryGetValue(REGISTRATION_ENABLED_CACHE_KEY, out Boolean registrationEnabled) && registrationEnabled;
+            return _cache.TryGetValue(REGISTRATION_ENABLED_CACHE_KEY, out Boolean registrationEnabled) ? registrationEnabled : true;
         }
 
         public async Task<IActionResult> OnGetAsync(string returnUrl = null)

@@ -44,17 +44,17 @@ public class CuttlefishService
 
     [Hangfire.AutomaticRetry(Attempts = 0, OnAttemptsExceeded = Hangfire.AttemptsExceededAction.Delete)]
     // we suppose cuttlefish hasn't been ran if stop gets failed. So, delete if it fails
-    public async Task<object> Stop(){
+    public async Task<CommandResult> Stop(){
         return await run("stop_cvd");
     }
 
     /** Restarts and waits for completion */
-    public async Task<object> Restart(int N){
+    public async Task<CommandResult> Restart(int N){
         return await run("restart_cvd", new [] {"--instance_num", N.ToString()});
     }
 
     /** Resets, restarts and waits completion */
-    public async Task<object> Powerwash(int N){
+    public async Task<CommandResult> Powerwash(int N){
         return await run("powerwash_cvd", new []{"--instance_num", N.ToString()});
     }
 
@@ -63,7 +63,7 @@ public class CuttlefishService
     //     return await run("powerwash_cvd", new []{"--instance_num", N.ToString()});
     // }
 
-    public async Task<object> Launch(CuttlefishLaunchOptions options){
+    public async Task<CommandResult> Launch(CuttlefishLaunchOptions options){
         if (
             options.Memory.Count() > 1 && options.InstancesNumber is not null && options.Memory.Count() != options.InstancesNumber 
             ||

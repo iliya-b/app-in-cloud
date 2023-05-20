@@ -150,12 +150,14 @@ const AddDeviceWindow = ({data, onClose}) => {
     </td>
   }
   
-  export const DeviceList = () => {
-    const TopInfo = ({data}) => data.count > 0 ? <tr><td colSpan={3}><font color="green">running tasks</font>: {data.count}</td></tr> :  <></>
-  
-    return <DataTable {...{path: 'admin/devices', fields: ['id', 'target', 'users'], TopInfo, Actions: DeviceActions, customFieldRenderers: {
+  export const DeviceList = ({role = 'admin'}) => {
+    const TopInfo = ({data}) => <></>
+    const columns = role === 'admin' ? ['id', 'target', 'users'] : ['id', 'target']
+    const path = role === 'admin' ? 'admin/devices' : 'devices'
+    return <><legend>{role === 'admin' ? 'Devices' : 'My Devices'}</legend>
+    <DataTable {...{path: path, fields: columns, TopInfo, Actions: DeviceActions, customFieldRenderers: {
       users: DeviceUsersFieldRenderer
-    }, CreateWindow: AddDeviceWindow}} />;
+    }, CreateWindow: AddDeviceWindow}} /></>;
   }
   
   

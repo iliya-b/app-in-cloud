@@ -8,9 +8,6 @@ public class Device
 {
     public string Id { get; set; }
     public int Memory { get; set; }
-    // ситуация: было создано 4 cvd версии 12
-    // удалены cvd #2 и #3
-    // как им не занимать RAM?
 
     public bool IsActive { get; set; }
     public Statuses Status { get; set; }

@@ -100,7 +100,8 @@ const TopInfo = ({data, handleResponse}) => {
     return <tr style={{cursor: 'pointer'}}><td onClick={toggleRegistration}>Registration {data.registrationEnabled ? <span className="badge bg-success">enabled <i className="bi bi-toggle-on"></i></span> : <span className="badge bg-danger">disabled <i className="bi bi-toggle-off"></i></span>}</td></tr>
 }
 export const UserList = () => {
-
-   
-    return <DataTable {...{path: 'admin/users', fields: ['id', 'email'], TopInfo, Actions: UserActions, CreateWindow: AddUserWindow}} />;
-  }
+    return <>
+      <legend>Users</legend>
+      <DataTable {...{path: 'admin/users', fields: ['id', 'email'], TopInfo, Actions: UserActions, CreateWindow: AddUserWindow}} />;
+  </>
+}

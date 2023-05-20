@@ -9,5 +9,5 @@ public abstract record CommandResult
 }
 
 public interface ICommandRunner {
-    public CommandResult run(string command, IEnumerable<string>? arguments = null, IDictionary<string, string>? env = null);
+    public CommandResult run(string command, IEnumerable<string>? arguments = null, IDictionary<string, string>? env = null, int timeout=System.Threading.Timeout.Infinite);
 }

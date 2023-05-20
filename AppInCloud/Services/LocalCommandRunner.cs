@@ -11,7 +11,7 @@ public class LocalCommandRunner: ICommandRunner {
 
     IConfiguration _config;
     public LocalCommandRunner(IConfiguration config) => _config = config;
-    public CommandResult run(string program, IEnumerable<string>? arguments, IDictionary<string, string>? env)
+    public CommandResult run(string program, IEnumerable<string>? arguments, IDictionary<string, string>? env, int timeout=System.Threading.Timeout.Infinite)
     {
             Console.WriteLine("running " + program + " with args: " + string.Join(' ',  arguments) );
             var cmd = new Process();
@@ -20,6 +20,7 @@ public class LocalCommandRunner: ICommandRunner {
             cmd.StartInfo.RedirectStandardOutput = true;
             cmd.StartInfo.CreateNoWindow = true;
             cmd.StartInfo.UseShellExecute = false;
+            
             if(env is not null){
                 foreach(var entry in env) cmd.StartInfo.Environment.Add(entry.Key, entry.Value);
             }
@@ -30,10 +31,13 @@ public class LocalCommandRunner: ICommandRunner {
             cmd.EnableRaisingEvents = true;
             cmd.Exited += cmdExited.EventHandler;
             cmd.Start();
-            cmdExited.Task.Wait();
+            var isComplete = cmdExited.Task.Wait(timeout);
 
+            if(!isComplete) {
+                return new CommandResult.Error(124, new string[]{});
+            }
             if(cmd.ExitCode != 0) {
-                return new CommandResult.Error(cmd.ExitCode, new[]{cmd.StandardOutput.ReadLine()});
+                return new CommandResult.Error(cmd.ExitCode, new []{cmd.StandardOutput.ReadLine()!});
             }
             List<string> result = new List<string> ();
             while (true){

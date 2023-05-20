@@ -10,7 +10,7 @@ public class SshCommandRunner: ICommandRunner {
 
     IConfiguration _config;
     public SshCommandRunner(IConfiguration config) => _config = config;
-    public CommandResult run(string program, IEnumerable<string>? arguments, IDictionary<string, string>? env)
+    public CommandResult run(string program, IEnumerable<string>? arguments, IDictionary<string, string>? env, int timeout=0)
     {
         var builder  = new LinuxCommandBuilder(); // escape arguments
         builder.AppendArgument(program);

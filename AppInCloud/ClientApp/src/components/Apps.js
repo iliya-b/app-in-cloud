@@ -15,6 +15,7 @@ const AppsTable = ({apps, deleteAction}) => {
         </tr>
       </thead>
       <tbody>
+        {apps.length === 0 && <tr><td colSpan={4}>No apps installed</td></tr> }
         {apps.map(app =>
           <tr key={app.name}>  
             <td>{app.status}</td>

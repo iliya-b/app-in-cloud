@@ -1,16 +1,28 @@
 import ApiAuthorzationRoutes from './components/api-authorization/ApiAuthorizationRoutes';
 import { Apps } from "./components/Apps";
 import { AppStream,  } from "./components/AppStream";
-import { Admin } from "./components/Admin";
+import { DefaultApps } from "./components/Apps";
+import { UserList } from "./components/Users";
+import { DeviceList } from "./components/Devices";
 
 const AppRoutes = [
   {
-    path: '/admin',
-    element: <Admin />
+    path: '/admin/users',
+    element: <UserList />
+  },{
+    path: '/admin/devices',
+    element: <DeviceList role='admin' />
+  },{
+    path: '/admin/defaultapps',
+    element: <DefaultApps />
   },
   {
     path: '/',
     element: <Apps />
+  },
+  {
+    path: '/my-devices',
+    element: <DeviceList role='user' />
   },
   {
     path: '/apps/:id',

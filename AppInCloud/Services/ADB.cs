@@ -18,14 +18,14 @@ public class ADB
         private readonly ICommandRunner _commandRunner;
         public ADB(IConfiguration config, ICommandRunner commandRunner) => (_commandRunner, _config) = (commandRunner, config);
 
-        private async Task<CommandResult> run(string deviceSerial, string command,  IEnumerable<string>? args=null){
+        private async Task<CommandResult> run(string deviceSerial, string command,  IEnumerable<string>? args=null, int timeout=System.Threading.Timeout.Infinite){
             string path =  _config["Emulator:BasePath"] + "/" + _config["Emulator:AdbPath"];
             if(args is null){
                 args = new List<string>{};
             }
             args = args.Prepend(command).Prepend(deviceSerial).Prepend("-s");
             
-            return _commandRunner.run(path, args);
+            return _commandRunner.run(path, args, timeout: timeout);
         }
         public async Task<BridgeResponse> Uninstall(string deviceSerial, string package){
             return await run(deviceSerial,  "uninstall" , new []{package}) switch {
@@ -47,8 +47,14 @@ public class ADB
             await run(deviceSerial, "reboot");
         }
 
+        // when using for cuttlefish instance, it stop the instance until next relaunch
+        public async Task Halt(string deviceSerial){
+            await run(deviceSerial, "reboot", new [] { "-p"});
+        }
+
+
         public async Task<bool> HealthCheck(string deviceSerial){
-            var result = await run(deviceSerial, "shell",  new[]{"echo", "test"});
+            var result = await run(deviceSerial, "shell",  new[]{"echo", "test"}, timeout: 500);
             return result switch {
                 CommandResult.Success(var output) => output.FirstOrDefault() == "test",
                 CommandResult.Error(int code, var output) => false,

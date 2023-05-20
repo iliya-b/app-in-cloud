@@ -8,7 +8,6 @@ export const Admin = () =>  {
     return (
       <div>
         <h3>Administration</h3>
-
         <legend>Devices </legend>
         <DeviceList/>
         <DefaultApps />

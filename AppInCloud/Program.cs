@@ -67,6 +67,13 @@ builder.Services.AddHangfireServer(x =>
             x.WorkerCount = 1; // do not allow run multiple cuttlefish operations concurrently
         });
 
+builder.Services.AddHangfireServer(x => 
+        {
+            x.ServerName = "cuttlefish_legacy";
+            x.Queues = new[] {"cuttlefish_legacy"};
+            x.WorkerCount = 1; // do not allow run multiple cuttlefish operations concurrently
+        });
+
         
 builder.Services.AddHangfireServer(x =>
         {
@@ -76,7 +83,7 @@ builder.Services.AddHangfireServer(x =>
 
 builder.Services.AddHangfire(configuration => configuration
         .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
+        // .UseRecommendedSerializerSettings()
         .UseResultsInContinuations()
         .UseFilter(new AutomaticRetryAttribute { Attempts = 0 })
         .UsePostgreSqlStorage(connectionString, new PostgreSqlStorageOptions()
@@ -105,49 +112,57 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+using (IServiceScope scope = app.Services.CreateScope()) 
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    context.Database.EnsureCreated();
 
 
-// using (IServiceScope scope = app.Services.CreateScope()) {
-//         var RoleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-//         var UserManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-//         string[] roleNames = { "Admin", "Manager", "Member" };
-//         IdentityResult roleResult;
+    for(int i=90; i <= 92 ; ++i){
+        var Id = "cvd-" + i;
+        var device = new Device() {
+            Id=Id,
+            Memory=1536,
+            IsActive=false,
+            Status=Device.Statuses.ENABLE,
+            Target=Device.Targets._13_x86_64
+        };
+        
+        if(!context.Devices.Any(d => d.Id == Id)) context.Devices.Add(device);
+    }
+    
+    for(int i=1; i <= 2 ; ++i){
+        var Id = "cvd-" + i;
+        var device = new Device() {
+            Id=Id,
+            Memory=1536,
+            IsActive=false,
+            Status=Device.Statuses.ENABLE,
+            Target=Device.Targets._12_x86_64
+        };
+        
+        if(!context.Devices.Any(d => d.Id == Id)) context.Devices.Add(device);
+    }
 
-//         foreach (var roleName in roleNames)
-//         {
-//             var roleExist = await RoleManager.RoleExistsAsync(roleName);
-//             if (!roleExist)
-//             {
-//                 roleResult = await RoleManager.CreateAsync(new IdentityRole(roleName));
-//             }
-//         }
 
-//         //Here you could create a super user who will maintain the web app
-//         var poweruser = new ApplicationUser
-//         {
+    string adminPass = app.Configuration["AppInCloud:DefaultAdminPassword"];
 
-//             UserName = app.Configuration["AppInCloud:DefaultAdminEmail"],
-//             Email = app.Configuration["AppInCloud:DefaultAdminEmail"],
-//             EmailConfirmed = true
-//         };
+    var admin = new ApplicationUser
+    {
+        UserName = app.Configuration["AppInCloud:DefaultAdminEmail"],
+        Email = app.Configuration["AppInCloud:DefaultAdminEmail"],
+        EmailConfirmed = true,
+        PasswordHash = ApplicationUser.HashPassword(adminPass)
+    };
 
-//         string userPWD = app.Configuration["AppInCloud:DefaultAdminPassword"];
-//         var _user = await UserManager.FindByEmailAsync(app.Configuration["AppInCloud:DefaultAdminEmail"]);
 
-//        if(_user == null)
-//        {
-//             var createPowerUser = await UserManager.CreateAsync(poweruser, userPWD);
-//             if (createPowerUser.Succeeded)
-//             {
-//                 await UserManager.AddToRoleAsync(poweruser, "Admin");
-//                 Console.WriteLine("creating admin user");
-//             }else{
-//                 Console.WriteLine("failed creating admin user: {0}", createPowerUser.Errors.First().Description);
-//             }
-//        }else{
-//             Console.WriteLine("not creating admin user");
-//        }
-// }
+    if(!context.Users.Any(u=>u.Email == app.Configuration["AppInCloud:DefaultAdminEmail"])){
+        context.Users.Add(admin);
+        Console.WriteLine("creating admin user");  
+    }
+
+    context.SaveChanges();
+}
 
 
 app.UseEndpoints(endpoints => {

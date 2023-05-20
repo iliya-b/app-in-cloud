@@ -8,7 +8,6 @@ public class CuttlefishLaunchOptions {
     public int? InstancesNumber = 1; // (InstanceBaseNumber, InstancesNumber) and InstanceNumbers are mutually excluding
     public IEnumerable<int>? InstanceNumbers  = null;
     public IEnumerable<int> Memory  = new int[]{1024, 1024};
-
     public static int getBaseNumber(AppInCloud.Models.Device.Targets target){
         return target switch
         {
@@ -91,7 +90,7 @@ public class CuttlefishService
 }
 
 
-[Hangfire.Queue("cuttlefish")]
+[Hangfire.Queue("cuttlefish_legacy")]
 [ErrorOn(type: typeof(CommandResult.Error))]
 public class CuttlefishLegacyService
 {

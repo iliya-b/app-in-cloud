@@ -25,11 +25,22 @@ export const NavMenu = () =>  {
           <Collapse className="d-sm-inline-flex flex-sm-row-reverse" isOpen={!collapsed} navbar>
             <ul className="navbar-nav flex-grow">
               {isAdmin && <NavItem>
-                <NavLink tag={Link} className="text-dark" to="/admin">Admin</NavLink>
+                <NavLink tag={Link} className="text-dark" to="/admin/users">Users</NavLink>
+              </NavItem>}
+              {isAdmin && <NavItem>
+                <NavLink tag={Link} className="text-dark" to="/admin/devices">Devices</NavLink>
+              </NavItem>}
+  
+              {isAdmin && <NavItem>
+                <NavLink tag={Link} className="text-dark" to="/admin/defaultapps">Default Apps</NavLink>
               </NavItem>}
   
               <NavItem>
-                <NavLink tag={Link} className="text-dark" to="/">Apps</NavLink>
+                <NavLink tag={Link} className="text-dark" to="/">My Apps</NavLink>
+              </NavItem>
+              
+              <NavItem>
+                <NavLink tag={Link} className="text-dark" to="/devices">My Devices</NavLink>
               </NavItem>
               <LoginMenu>
               </LoginMenu>

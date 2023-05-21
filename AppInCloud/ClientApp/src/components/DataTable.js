@@ -3,7 +3,7 @@ import React, { useState, useEffect, Component } from 'react';
 import _ from 'lodash'
 
 
-export const DataTable = ({ fields, customFieldRenderers, path, Actions, TopInfo, CreateWindow }) => {
+export const DataTable = ({ fields, customFieldRenderers, path, Actions, TopInfo, TopActions, CreateWindow }) => {
     const [data, setData] = useState({
         count: 0,
         list: [],
@@ -46,11 +46,12 @@ export const DataTable = ({ fields, customFieldRenderers, path, Actions, TopInfo
       {error ? <tr><td colSpan={3}><font color="red">{error}</font></td></tr> : <></>} 
       <tr>
         {fields.map(field => <td key={field}>{field}</td>)}
-        <td key={'actions'}>Actions
-
+        <td key={'actions'} >Actions
           <button onClick={() => toggleCreateWindow()} className='btn btn-sm btn-outline-primary ms-2' title='Create'>
             <i className="bi bi-plus"></i>
           </button>
+          {TopActions && <TopActions />}
+
         </td>
       </tr>
     </thead>

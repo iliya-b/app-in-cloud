@@ -10,8 +10,11 @@ public class ApplicationUser : IdentityUser
 {
     public ICollection<MobileApp> MobileApps { get; set; }
     public List<Device> Devices { get; } = new();
-
     public bool IsAdmin {get; set; } 
+    public int AllowedMachinesAmount {get; set; }
+    public int AllowedRunningMachinesAmount {get; set; }
+    public TimeSpan DailyLimit {get; set; }
+    public TimeSpan MonthlyLimit {get; set; }
 
     public static string HashPassword(string password)   {
         return Convert.ToBase64String(KeyDerivation.Pbkdf2(

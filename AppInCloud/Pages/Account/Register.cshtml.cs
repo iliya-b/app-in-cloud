@@ -15,14 +15,13 @@ namespace AppInCloud.Pages.Account
     {
         private readonly ILogger<LoginModel> _logger;
         private readonly ApplicationDbContext _db;
-        private readonly IMemoryCache _cache;
-        private static string REGISTRATION_ENABLED_CACHE_KEY = "registration_enabled";
+        private readonly IConfiguration _config;
 
-        public RegisterModel(ILogger<LoginModel> logger, IMemoryCache cache, ApplicationDbContext db)
+        public RegisterModel(ILogger<LoginModel> logger, IConfiguration config, ApplicationDbContext db)
         {
             _logger = logger;
             _db = db;
-            _cache = cache;
+            _config = config;
         }
 
         [BindProperty]
@@ -50,7 +49,7 @@ namespace AppInCloud.Pages.Account
         }
 
         private bool isRegistrationEnabled() {
-            return _cache.TryGetValue(REGISTRATION_ENABLED_CACHE_KEY, out Boolean registrationEnabled) ? registrationEnabled : true;
+            return _config.GetValue<bool>(Services.Settings.REGISTRATION_ENABLED_CACHE_KEY, true);
         }
 
         public async Task<IActionResult> OnGetAsync(string returnUrl = null)

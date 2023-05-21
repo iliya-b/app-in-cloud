@@ -11,7 +11,7 @@ const AppRoutes = [
     element: <UserList />
   },{
     path: '/admin/devices',
-    element: <DeviceList role='admin' />
+    element: <DeviceList key='admin-devices' role='admin' />
   },{
     path: '/admin/defaultapps',
     element: <DefaultApps />
@@ -22,7 +22,7 @@ const AppRoutes = [
   },
   {
     path: '/my-devices',
-    element: <DeviceList role='user' />
+    element: <DeviceList key='user-devices' role='user' />
   },
   {
     path: '/apps/:id',

@@ -52,8 +52,14 @@ builder.Services.AddScoped<AppInCloud.Services.InstallationService>();
 builder.Services.AddScoped<AppInCloud.Services.CuttlefishService>( x => {
     return new CuttlefishService(x.GetRequiredService<ICommandRunner>(), x.GetRequiredService<IConfiguration>()["Emulator:BasePath"]);
 });
-builder.Services.AddScoped<AppInCloud.Services.CuttlefishLegacyService>( x => {
-    return new CuttlefishLegacyService(x.GetRequiredService<ICommandRunner>(), x.GetRequiredService<IConfiguration>()["Emulator:LegacyBasePath"]);
+builder.Services.AddScoped<AppInCloud.Services.VirtualDeviceService>( x => {
+    return new VirtualDeviceService(x.GetRequiredService<ICommandRunner>(), (int N) => {
+        if(N <= 10){
+            return x.GetRequiredService<IConfiguration>()["Emulator:LegacyBasePath"] + N;
+        }else{
+            return x.GetRequiredService<IConfiguration>()["Emulator:BasePath"] + N;
+        }
+    });
 });
 builder.Services.AddScoped<AppInCloud.Services.AndroidService>();
 builder.Services.AddControllersWithViews().AddJsonOptions(options => {
@@ -67,14 +73,7 @@ builder.Services.AddHangfireServer(x =>
             x.WorkerCount = 1; // do not allow run multiple cuttlefish operations concurrently
         });
 
-builder.Services.AddHangfireServer(x => 
-        {
-            x.ServerName = "cuttlefish_legacy";
-            x.Queues = new[] {"cuttlefish_legacy"};
-            x.WorkerCount = 1; // do not allow run multiple cuttlefish operations concurrently
-        });
 
-        
 builder.Services.AddHangfireServer(x =>
         {
             x.Queues = new[] {"default"};

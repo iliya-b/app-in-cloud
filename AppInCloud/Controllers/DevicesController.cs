@@ -32,7 +32,7 @@ public class DevicesController : ControllerBase
     private long tasksCount(){
         var processing = JobStorage.Current.GetMonitoringApi().ProcessingJobs(0, int.MaxValue).Where(j=>j.Value.ServerId.StartsWith("cuttlefish:")).Count();
         var enqueued = JobStorage.Current.GetMonitoringApi().EnqueuedCount("cuttlefish");
-        return processing + enqueued;
+        return processing;
     }
 
     private bool canRunTask(){
@@ -149,8 +149,8 @@ public class DevicesController : ControllerBase
         var serial = device.getSerialNumber();
         var N = device.getCuttlefishNumber();
         var rebootJob = BackgroundJob.Enqueue<ADB>(job => job.RebootAndWait(new string[] {serial}));
-        var stopJob = BackgroundJob.ContinueJobWith<CuttlefishLegacyService>(rebootJob, job => job.Stop(N));
-        return BackgroundJob.ContinueJobWith<CuttlefishLegacyService>(
+        var stopJob = BackgroundJob.ContinueJobWith<VirtualDeviceService>(rebootJob, job => job.Stop(N));
+        return BackgroundJob.ContinueJobWith<VirtualDeviceService>(
                 stopJob, 
                 job => job.Launch(N, launchOptions), 
                 JobContinuationOptions.OnAnyFinishedState
@@ -173,40 +173,19 @@ public class DevicesController : ControllerBase
 
         string resetJob;
 
-        if(chosenTarget == Device.Targets._13_x86_64){ // for >=13 android we need to reboot devices and then relaunch the cluster
-            var launchOptions = Device.GetLaunchOptions(
-                _db.Devices
-                    .Where(d => d.Target == chosenTarget)
-                    .Where(d => d.IsActive)
-            );
-            if(launchOptions is null) return UnprocessableEntity();
-            var serials = _db.Devices.Where(d => d.IsActive).Where(d => d.Target == chosenTarget).Select(d => d.getSerialNumber());
-            var rebootJob = BackgroundJob.Enqueue<ADB>(job => job.RebootAndWait(serials));
-            var stopJob = BackgroundJob.ContinueJobWith<CuttlefishService>(rebootJob, job => job.Stop());
-            var launchJob = BackgroundJob.ContinueJobWith<CuttlefishService>(
-                stopJob, 
-                job => job.Launch(launchOptions), 
-                JobContinuationOptions.OnAnyFinishedState
-            );
-            resetJob = BackgroundJob.ContinueJobWith<CuttlefishService>(
-                launchJob,
-                job => job.Powerwash(availableDevice.getCuttlefishNumber())
-            );
+        var launchOptions = Device.GetLaunchOptions(availableDevice);
+        if(launchOptions is null) return UnprocessableEntity();
 
-        } else if(chosenTarget == Device.Targets._12_x86_64){ // for <=12 we can just start it independently
-            var launchOptions = Device.GetLaunchOptions(availableDevice);
-            if(launchOptions is null) return UnprocessableEntity();
+        var N = availableDevice.getCuttlefishNumber();
+        var startJob = BackgroundJob.Enqueue<VirtualDeviceService>(
+            job => job.Launch(N, launchOptions)
+        );
+        resetJob = BackgroundJob.ContinueJobWith<VirtualDeviceService>(
+            startJob,
+            job => job.Powerwash(N),
+            JobContinuationOptions.OnAnyFinishedState // reset even if launch failed (for it can  already be launched)
+        );
 
-            var N = availableDevice.getCuttlefishNumber();
-            var startJob = BackgroundJob.Enqueue<CuttlefishLegacyService>(
-                job => job.Launch(N, launchOptions)
-            );
-            resetJob = BackgroundJob.ContinueJobWith<CuttlefishLegacyService>(
-                startJob,
-                job => job.Powerwash(N),
-                JobContinuationOptions.OnAnyFinishedState // reset even if launch failed (for it can be already launched)
-            );
-        }else return UnprocessableEntity();
 
         var defaultApps = _db.DefaultApps.ToList();
         foreach(var app in defaultApps){
@@ -238,23 +217,24 @@ public class DevicesController : ControllerBase
         if(!canRunTask()) return UnprocessableEntity(new { Errors = new [] {"Cannot handle this device now: running other tasks"}});
         var device = _db.Devices.Where(d => d.Id == deviceId).First();
         var N = device.getCuttlefishNumber();
+        var serial = device.getSerialNumber();
         var isOn = await _adb.HealthCheck(device.getSerialNumber());
         var launchOptions = Device.GetLaunchOptions(device);
         if(launchOptions is null) return UnprocessableEntity();
-        string switchJob;
+
         device.Status = isOn ? Device.Statuses.DISABLE : Device.Statuses.ENABLE;
         _db.Devices.Update(device);
         _db.SaveChanges();
+
+        if(isOn){
+            var rebootJob =  BackgroundJob.Enqueue<ADB>(job => job.RebootAndWait(new [] {serial}));
+            var switchJob = BackgroundJob.ContinueJobWith<VirtualDeviceService>(rebootJob, job => job.Stop(N));
+        }else{
+            var ensureStopJob = BackgroundJob.Enqueue<VirtualDeviceService>(job => job.Stop(N));
+
+            var switchJob = BackgroundJob.ContinueJobWith<VirtualDeviceService>(ensureStopJob, job => job.Launch(N, launchOptions));
+        }
         
-        if(device.Target == Device.Targets._12_x86_64){
-            switchJob = BackgroundJob.Enqueue<CuttlefishLegacyService>(
-                isOn ? job => job.Stop(N) : job => job.Launch(N, launchOptions)
-            );
-            // for android 12 we can stop/launch just the related instance
-        }else if(device.Target == Device.Targets._13_x86_64){
-            restartJob(_db.Devices.Where(d => d.IsActive && d.Status == Device.Statuses.ENABLE));
-            // for android 13 we need to restart a whole cluster
-        }else return UnprocessableEntity();
         return Ok();
     }
     [HttpPost]
@@ -263,12 +243,7 @@ public class DevicesController : ControllerBase
         if(!canRunTask()) return UnprocessableEntity(new { Errors = new [] {"Cannot handle this device now: running other tasks"}});
         var device = _db.Devices.Where(d => d.Id == deviceId).First();
         var deviceNumber = device.getCuttlefishNumber();
-        string startJob, resetJob;
-        if(device.Target == Device.Targets._12_x86_64){
-            resetJob = BackgroundJob.Enqueue<CuttlefishLegacyService>(job => job.Powerwash(deviceNumber));
-        }else if(device.Target == Device.Targets._13_x86_64){
-            resetJob = BackgroundJob.Enqueue<CuttlefishService>(job => job.Powerwash(deviceNumber));
-        }else return UnprocessableEntity();
+        string resetJob = BackgroundJob.Enqueue<VirtualDeviceService>(job => job.Powerwash(deviceNumber));
         
         var defaultApps = _db.DefaultApps.ToList();
         foreach(var app in defaultApps){

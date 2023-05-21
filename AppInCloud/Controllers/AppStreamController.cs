@@ -35,29 +35,44 @@ public class AppStreamController : ControllerBase
     }   
  
     private ApplicationUser GetUser() {
-        return _db.Users.Where(u => u.Email == _httpContextAccessor.HttpContext!.User.Identity!.Name).First();
+        return _db.Users.Where(u => u.Email == _httpContextAccessor.HttpContext!.User.Identity!.Name).Include(u=>u.Devices).First();
     }
 
  /**
     Start application and return web rtc parameters
     todo: use real webrtc, not iframe
     */
+    // [HttpGet]
+    // [Route("")]
+    // public async Task<IActionResult> Get(int id)
+    // {
+    //     var userId = GetUser().Id;
+    //     var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
+    //     var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
+
+    //     Models.Device device = app.Device;
+    //     if(device is null || !user.Devices.Any(d => d.Id == device.Id)){
+    //         return Unauthorized("No device is available"); // no device or app assigned to a device to which user has no access
+    //                                             // e.g. if access was drawned
+    //     }
+    //     await _adb.Start(device.getSerialNumber(), app.PackageName);
+        
+    //     return Ok("/devices/" + app.DeviceId + "/files/client.html");
+    // }
     [HttpGet]
     [Route("")]
-    public async Task<IActionResult> Get(int id)
+    public async Task<IActionResult> Get(string id)
     {
-        var userId = GetUser().Id;
-        var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
-        var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
-
-        Models.Device device = app.Device;
-        if(device is null || !user.Devices.Any(d => d.Id == device.Id)){
-            return Unauthorized("No device is available"); // no device or app assigned to a device to which user has no access
-                                                // e.g. if access was drawned
-        }
-        await _adb.Start(device.getSerialNumber(), app.PackageName);
+        var user = GetUser();
+        // var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
+        // var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
         
-        return Ok("/devices/" + app.DeviceId + "/files/client.html");
+        Models.Device? device = user.Devices.Find(d=>d.Id == id);
+        if(device is null || !device.IsActive || device.Status == Device.Statuses.DISABLE){
+            return Unauthorized("No device is available");
+        }
+        
+        return Ok("/devices/" + device.Id + "/files/client.html");
     }
 
 
@@ -72,21 +87,21 @@ public class AppStreamController : ControllerBase
     public async Task<IActionResult> PolledConnection(DeviceRequest deviceRequest)
     {
         var userId = GetUser().Id;
-        bool allowed = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First().Devices.Exists(f => f.Id == deviceRequest.device_id);
-        if(!allowed) {
-            return new JsonResult("error");
+        var device = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First().Devices.Find(f => f.Id == deviceRequest.device_id);
+        if(device is null) {
+            return new JsonResult("error device");
         }
         
         try	
         {
-            HttpResponseMessage response = await client.PostAsync("https://localhost:" + (8442 + CuttlefishLaunchOptions.BaseNumber) + "/polled_connections", new StringContent(JsonSerializer.Serialize(deviceRequest)));
+            HttpResponseMessage response = await client.PostAsync("https://localhost:" + (8442 + CuttlefishLaunchOptions.getBaseNumber(device.Target)) + "/polled_connections", new StringContent(JsonSerializer.Serialize(deviceRequest)));
             response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync();
             return new ContentResult { Content = responseBody, ContentType = "application/json" };
         }
         catch (HttpRequestException)
         {
-            return new JsonResult("error");
+            return new JsonResult("error proxy");
         }
     }
 

@@ -2,18 +2,16 @@ using AppInCloud.Services;
 
 namespace AppInCloud.Models;
 
-
-
 public class Device
 {
     public string Id { get; set; }
     public int Memory { get; set; }
-
     public bool IsActive { get; set; }
     public Statuses Status { get; set; }
     public Targets Target {get; set; }
     public List<ApplicationUser> Users  { get; set; } = new List<ApplicationUser>();
 
+    public DateTime? StartedAt {get; set; }
     public int getCuttlefishNumber()
     {
         if(!Id.StartsWith("cvd-")) throw new InvalidOperationException("Not a cuttlefish device");

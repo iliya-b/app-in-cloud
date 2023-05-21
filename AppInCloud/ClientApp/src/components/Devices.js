@@ -56,9 +56,7 @@ const AddDeviceWindow = ({data, onClose}) => {
             <span>{ram} MB</span>
           </label>
   
-          {target === '_13_x86_64' && <div className="alert alert-info" role="alert">
-            {'All devices will be relaunched when using Android >= 13'}
-          </div>}
+          
           {error && <div className="alert alert-danger" role="alert">
             {error}
           </div>}
@@ -99,18 +97,18 @@ const AddDeviceWindow = ({data, onClose}) => {
               <button className='btn btn-sm btn-outline-danger' onClick={() => reset()}>
                 Reset
               </button>
-              {entry.isActive && entry.status === "enable" && <button title='device is on' className='btn btn-sm btn-outline-success' onClick={() => switchDevice()}>
+              {entry.isActive && <button title='device is on' className='btn btn-sm btn-outline-success' onClick={() => switchDevice()}>
                 ON
               </button>}
-              {entry.isActive && entry.status === "disable" && <button disabled title='device is turning off' className='btn btn-sm btn-outline-success'>
+              {/* {entry.isActive && entry.status === "disable" && <button disabled title='device is turning off' className='btn btn-sm btn-outline-success'>
                 TURNING OFF...
-              </button>}
-              {!entry.isActive && entry.status === "disable" && <button title='device is off' className='btn btn-sm btn-outline-danger' onClick={() => switchDevice()}>
+              </button>} */}
+              {!entry.isActive && <button title='device is off' className='btn btn-sm btn-outline-danger' onClick={() => switchDevice()}>
                 OFF
               </button>}
-              {!entry.isActive && entry.status === "enable" && <button title='device is turning on' className='btn btn-sm btn-outline-danger' disabled>
+              {/* {!entry.isActive && entry.status === "enable" && <button title='device is turning on' className='btn btn-sm btn-outline-danger' disabled>
                 TURNING ON...
-              </button>}
+              </button>} */}
               <button className='btn btn-sm btn-outline-danger' onClick={() => deactivate()}>
                 <i className="bi bi-trash-fill"></i>
               </button>
@@ -149,12 +147,15 @@ const AddDeviceWindow = ({data, onClose}) => {
     </button>
     </td>
   }
+ 
+  
   
   export const DeviceList = ({role = 'admin'}) => {
-    const TopInfo = ({data}) => <></>
+    const TopInfo = ({data}) => <>{data.count && <tr><td colSpan={4} className='text-danger'>Running tasks: {data.count}</td></tr> || null}</>
     const columns = role === 'admin' ? ['id', 'target', 'users'] : ['id', 'target']
     const path = role === 'admin' ? 'admin/devices' : 'devices'
-    return <><legend>{role === 'admin' ? 'Devices' : 'My Devices'}</legend>
+    
+    return <><legend>{role === 'admin' ? 'Devices' : 'My Devices'} </legend>
     <DataTable {...{path: path, fields: columns, TopInfo, Actions: DeviceActions, customFieldRenderers: {
       users: DeviceUsersFieldRenderer
     }, CreateWindow: AddDeviceWindow}} /></>;

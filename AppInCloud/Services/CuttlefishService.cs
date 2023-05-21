@@ -17,7 +17,7 @@ public class CuttlefishLaunchOptions {
         };
     }
 }
-
+//-report_anonymous_usage_stats=n
 
 [Hangfire.Queue("cuttlefish")]
 [ErrorOn(type: typeof(CommandResult.Error))]
@@ -48,13 +48,13 @@ public class CuttlefishService
     }
 
     /** Restarts and waits for completion */
-    public async Task<CommandResult> Restart(int N){
-        return await run("restart_cvd", new [] {"--instance_num", N.ToString()});
+    public async Task<CommandResult> Restart(int instanceNumber){
+        return await run("restart_cvd", new [] {"--instance_num", instanceNumber.ToString()});
     }
 
     /** Resets, restarts and waits completion */
-    public async Task<CommandResult> Powerwash(int N){
-        return await run("powerwash_cvd", new []{"--instance_num", N.ToString()});
+    public async Task<CommandResult> Powerwash(int instanceNumber){
+        return await run("powerwash_cvd", new []{"--instance_num", instanceNumber.ToString()});
     }
 
 
@@ -78,6 +78,7 @@ public class CuttlefishService
         return await run(
             "launch_cvd", 
             new string[]{
+                "-report_anonymous_usage_stats=Y",
                 "--daemon", 
                 "-memory_mb",  string.Join(',', options.Memory),
             }.Concat((options.InstancesNumber, options.InstanceNumbers) switch {
@@ -90,27 +91,26 @@ public class CuttlefishService
 }
 
 
-[Hangfire.Queue("cuttlefish_legacy")]
+[Hangfire.Queue("cuttlefish")]
 [ErrorOn(type: typeof(CommandResult.Error))]
-public class CuttlefishLegacyService
+public class VirtualDeviceService
 {
-    private readonly string _basePath;
+    private readonly Func<int, string> _basePath;
     private readonly ICommandRunner _commandRunner;
-    public CuttlefishLegacyService(ICommandRunner commandRunner, string basePath) =>
-                (_commandRunner, _basePath) = (commandRunner, basePath);
+    public VirtualDeviceService(ICommandRunner commandRunner, Func<int, string> pathResolver) =>
+                (_commandRunner, _basePath) = (commandRunner, pathResolver);
 
 
     public Task Powerwash(int instanceNumber) {
-        return new CuttlefishService(_commandRunner, _basePath + instanceNumber).Powerwash(instanceNumber); 
-        // path is like ~/cuttlefish/cf12
+        return new CuttlefishService(_commandRunner, _basePath(instanceNumber)).Powerwash(instanceNumber); 
     }
 
     [Hangfire.AutomaticRetry(Attempts = 0, OnAttemptsExceeded = Hangfire.AttemptsExceededAction.Delete)]
     public Task Stop(int instanceNumber) {
-        return new CuttlefishService(_commandRunner, _basePath + instanceNumber).Stop(); 
-        // path is like ~/cuttlefish/cf12
+        return new CuttlefishService(_commandRunner, _basePath (instanceNumber)).Stop(); 
+        // path is like ~/cuttlefish12/cf12
     }
     public Task Launch(int instanceNumber, CuttlefishLaunchOptions options) {
-        return new CuttlefishService(_commandRunner, _basePath + instanceNumber).Launch(options); 
+        return new CuttlefishService(_commandRunner, _basePath (instanceNumber)).Launch(options); 
     }
 }

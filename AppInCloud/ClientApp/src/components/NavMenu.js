@@ -40,7 +40,7 @@ export const NavMenu = () =>  {
               </NavItem>
               
               <NavItem>
-                <NavLink tag={Link} className="text-dark" to="/devices">My Devices</NavLink>
+                <NavLink tag={Link} className="text-dark" to="/my-devices">My Devices</NavLink>
               </NavItem>
               <LoginMenu>
               </LoginMenu>

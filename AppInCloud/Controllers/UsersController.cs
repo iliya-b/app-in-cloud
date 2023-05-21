@@ -19,36 +19,28 @@ public class UsersController : ControllerBase
     private readonly ILogger<UsersController> _logger;
     private readonly Data.ApplicationDbContext _db;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IMemoryCache _cache;
-    private static string REGISTRATION_ENABLED_CACHE_KEY = "registration_enabled";
+    private readonly IConfiguration _config;
 
 
-    public UsersController(IMemoryCache cache, ILogger<UsersController> logger, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor)
+    public UsersController(IConfiguration config, ILogger<UsersController> logger, Data.ApplicationDbContext db, IHttpContextAccessor httpContextAccessor)
     {
-        _cache = cache;
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
         _db = db;
+        _config = config;
     }
 
     [HttpPost]
     [Route("Settings")]
     public IActionResult Settings([FromForm] bool registrationEnabled)
     {
-        _cache.Set(REGISTRATION_ENABLED_CACHE_KEY, registrationEnabled);
+        Services.Settings.Update(Services.Settings.REGISTRATION_ENABLED_CACHE_KEY, registrationEnabled);
         return Ok();
     }
 
 
     private bool isRegistrationEnabled() {
-
-        if (!_cache.TryGetValue(REGISTRATION_ENABLED_CACHE_KEY, out Boolean registrationEnabled))
-        {
-            _cache.Set(REGISTRATION_ENABLED_CACHE_KEY, true);
-            registrationEnabled = true;
-        }
-
-        return registrationEnabled;
+        return _config.GetValue<bool>(Services.Settings.REGISTRATION_ENABLED_CACHE_KEY, true);
     }
     [HttpGet]
     [Route("")] 
@@ -56,7 +48,8 @@ public class UsersController : ControllerBase
     {
 
         var list =  _db.Users
-            .Select(u => new {Id=u.Id, Email=u.Email})
+            .Select(u => new {Id=u.Id, Email=u.Email, DailyLimit=u.DailyLimit.TotalMinutes, AllowedRunningMachinesAmount=u.AllowedRunningMachinesAmount, AllowedMachinesAmount = u.AllowedMachinesAmount})
+            .OrderBy(u => u.Id)
             .ToList(); 
         return Ok(new { List=list, RegistrationEnabled = isRegistrationEnabled() });
     }
@@ -84,6 +77,23 @@ public class UsersController : ControllerBase
         var user = _db.Users.Where(u => u.Id == userId).First();
         
         _db.Users.Remove(user);
+        _db.SaveChanges();
+        return Ok();
+    }
+
+
+   
+    [HttpPost]
+    [Route("{userId}")]
+    public IActionResult updateUser(string userId, [FromForm] int dailyLimit, [FromForm] int allowedRunningMachinesAmount, [FromForm] int allowedMachinesAmount){
+        var user = _db.Users.Where(u => u.Id == userId).First();
+        if(allowedMachinesAmount < 0) return UnprocessableEntity("allowedMachinesAmount should be >= 0");
+        if(allowedRunningMachinesAmount < 0) return UnprocessableEntity("allowedRunningMachinesAmount should be >= 0");
+        if(allowedRunningMachinesAmount > allowedMachinesAmount ) return UnprocessableEntity("allowedRunningMachinesAmount should be <= allowedMachinesAmount");
+        user.AllowedMachinesAmount = allowedMachinesAmount;
+        user.AllowedRunningMachinesAmount = allowedRunningMachinesAmount;
+        user.DailyLimit = TimeSpan.FromMinutes(dailyLimit);
+        _db.Users.Update(user);
         _db.SaveChanges();
         return Ok();
     }

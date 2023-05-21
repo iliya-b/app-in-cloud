@@ -86,6 +86,44 @@ const AddUserWindow = ({ onClose}) => {
               </button>
     </div>
   }
+
+  const UsersLimitColumnRenderer = ({entry, handleResponse}) => {
+    const userId = entry.id
+   
+    const [allowedMachineAmount, setAllowedMachineAmount] = useState(entry.allowedMachinesAmount)
+    const [allowedRunningMachinesAmount, setAllowedRunningMachinesAmount] = useState(entry.allowedRunningMachinesAmount)
+    const [dailyLimit, setDailyLimit] = useState(entry.dailyLimit)
+    useEffect(()=>{
+      if(dailyLimit == entry.dailyLimit && allowedMachineAmount === entry.allowedMachinesAmount && allowedRunningMachinesAmount === entry.allowedRunningMachinesAmount) return;
+
+      fetch('api/v1/admin/users/' + userId , {
+        method: 'post', 
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},   
+        body: "allowedMachinesAmount=" + encodeURI(allowedMachineAmount)
+         + "&allowedRunningMachinesAmount=" + encodeURI(allowedRunningMachinesAmount)
+         + "&dailyLimit=" + encodeURI(dailyLimit)
+      }).then(handleResponse);
+
+    }, [allowedMachineAmount, dailyLimit, allowedRunningMachinesAmount])
+    return <td  >
+          
+      <div className="input-group mb-3">
+        <span className="input-group-text">running</span>
+        <input type='number' className='form-control' min={0} value={allowedRunningMachinesAmount} onChange={e=>setAllowedRunningMachinesAmount(e.target.valueAsNumber)} />
+        <span className="input-group-text">total</span>
+        <input type='number' className='form-control' min={0} value={allowedMachineAmount} onChange={e=>setAllowedMachineAmount(e.target.valueAsNumber)} />
+      </div>
+      <div className="input-group mb-3">
+        <span className="input-group-text">daily limit</span>
+
+        <input type='range' className='form-control' min={0} max={1440} step={1} value={dailyLimit} onChange={e=>setDailyLimit(e.target.valueAsNumber)} />
+        <span className="input-group-text">{dailyLimit} min</span>
+
+      </div>
+    </td>
+  }
+
+
 const TopInfo = ({data, handleResponse}) => {
     const toggleRegistration = () => {
         fetch('api/v1/admin/users/settings' , {
@@ -102,6 +140,9 @@ const TopInfo = ({data, handleResponse}) => {
 export const UserList = () => {
     return <>
       <legend>Users</legend>
-      <DataTable {...{path: 'admin/users', fields: ['id', 'email'], TopInfo, Actions: UserActions, CreateWindow: AddUserWindow}} />;
+      <DataTable {...{path: 'admin/users', fields: ['id', 'email', 'machines_limit'], TopInfo, Actions: UserActions, CreateWindow: AddUserWindow,
+              customFieldRenderers: {
+                machines_limit: UsersLimitColumnRenderer
+              }}} />
   </>
 }

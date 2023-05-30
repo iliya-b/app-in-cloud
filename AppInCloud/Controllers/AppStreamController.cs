@@ -61,18 +61,22 @@ public class AppStreamController : ControllerBase
     // }
     [HttpGet]
     [Route("")]
-    public async Task<IActionResult> Get(string id)
+    public async Task<IActionResult> Get(int id)
     {
-        var user = GetUser();
-        // var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
-        // var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
+        var userId = GetUser().Id;
+        var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
+        var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
         
-        Models.Device? device = user.Devices.Find(d=>d.Id == id);
+        Models.Device? device = app.Device;
         if(device is null || !device.IsActive || device.Status == Device.Statuses.DISABLE){
-            return Unauthorized("No device is available");
+            return Unauthorized("No device is available: " + (device is null ? "device not found" : "device is down or disabled"));
         }
-        
-        return Ok("/devices/" + device.Id + "/files/client.html");
+
+        return device.Target switch {
+            Device.Targets._13_x86_64 => Ok("/devices/" + device.Id + "/files/client.html"),
+            Device.Targets._12_x86_64 => Ok("/devices/" + device.Id + "/"),
+            _ => Ok(),
+        };
     }
 
 

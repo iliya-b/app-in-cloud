@@ -42,12 +42,15 @@ public class Device
         };
     }
     public static CuttlefishLaunchOptions? GetLaunchOptions (Device device) {
-        if(device.Target == Targets._13_x86_64) return GetLaunchOptions(new Device[] { device });
 
-        return new CuttlefishLaunchOptions {
-            InstancesNumber = 1, 
-            Memory = new int[] {device.Memory},
-            InstanceBaseNumber = CuttlefishLaunchOptions.getBaseNumber(device.Target)
+        return device.Target switch {
+            Targets._13_x86_64 => GetLaunchOptions(new Device[] { device }),
+            Targets._12_x86_64 => new CuttlefishLaunchOptions {
+                InstancesNumber = 1, 
+                Memory = new int[] {device.Memory},
+                InstanceBaseNumber = device.getCuttlefishNumber()
+            },
+            _ => null
         };
     }
 

@@ -92,6 +92,7 @@ builder.Services.AddHangfire(configuration => configuration
                 })
 );
 var app = builder.Build();
+    app.UseHttpLogging();
 
 app.UseHangfireDashboard();
 // Configure the HTTP request pipeline.

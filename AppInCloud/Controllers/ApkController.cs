@@ -36,9 +36,17 @@ public class ApkController : ControllerBase
     }
     [HttpGet]
     [Route("")]
-    public IEnumerable<Models.MobileApp> Get()
+    public IActionResult Get()
     {
-        return  _db.MobileApps.Where(f => f.UserId == GetUser().Id).IgnoreAutoIncludes().ToList();
+        return Ok(
+            _db.MobileApps.IgnoreAutoIncludes().Where(f => f.UserId == GetUser().Id).ToList().Select(
+                app => new {
+                    Id = app.Id, Name=app.Name, 
+                    PackageName = app.PackageName, 
+                    Type=app.Type, Status = app.Status,
+                    DeviceId = app.DeviceId
+            })
+        );
     }
 
     private ApplicationUser GetUser() {

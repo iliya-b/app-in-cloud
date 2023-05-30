@@ -26,7 +26,6 @@ const AppRoutes = [
   },
   {
     path: '/apps/:id',
-    requireAuth: true,
     element: <AppStream />,
 
   },

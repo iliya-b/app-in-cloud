@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {  useParams } from "react-router-dom";
-import authService from './api-authorization/AuthorizeService'
 
 export const AppStream = (props) => {
   const {id} = useParams();
   const [url, setUrl] = useState()
   const [error, setError] = useState(null)
   useEffect(() => {
-    authService.getAccessToken().then(
-      token => fetch(`api/v1/appstream?id=${id}`, {headers: !token ? {} : { 'Authorization': `Bearer ${token}` }})
+      fetch(`api/v1/appstream?id=${id}`)
                 .then(
                   response => {
                       response.text().then(data => {
@@ -20,9 +18,11 @@ export const AppStream = (props) => {
                       })
                   }
                 )
-    );
   }, [])
-
+  // onLoad={e => 
+  //   setTimeout(() => {
+  //     e.target.contentWindow['connect_1'].click()
+  //     } , 2500) }
   return (
   <div>
     <h1 >App Stream #{id}</h1>

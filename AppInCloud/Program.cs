@@ -9,12 +9,18 @@ using Hangfire.PostgreSql;
 using AppInCloud.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
+using Yarp.ReverseProxy.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "");
 
 builder.Services.AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
+    // .LoadFromMemory(
+    //     new [] {new RouteConfig() {Match = }},
+    //     new [] {new ClusterConfig()}
+    // )
+    ;
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -105,6 +111,14 @@ else
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+
+app.Use((context, next) =>
+{
+    Console.WriteLine(context.Request.Headers["Referrer"]);
+    return next();
+});
+
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

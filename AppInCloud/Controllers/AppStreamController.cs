@@ -67,15 +67,21 @@ public class AppStreamController : ControllerBase
         var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
         var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
         
-        Models.Device? device = app.Device;
+        Models.Device? device = _db.Devices.Find("cvd-2");//app.Device;
         if(device is null || !device.IsActive || device.Status == Device.Statuses.DISABLE){
             return Unauthorized("No device is available: " + (device is null ? "device not found" : "device is down or disabled"));
         }
 
         return device.Target switch {
-            Device.Targets._13_x86_64 => Ok("/devices/" + device.Id + "/files/client.html"),
-            Device.Targets._12_x86_64 => Ok("/devices/" + device.Id + "/"),
-            _ => Ok(),
+            Device.Targets._13_x86_64 => Ok(new {
+                url="/devices/" + device.Id + "/files/client.html",
+                deviceId=device.Id
+            }),
+            Device.Targets._12_x86_64 => Ok(new {
+                url="/devices/" + device.Id + "/",
+                deviceId=device.Id
+            }),
+            _ => Ok("error"),
         };
     }
 

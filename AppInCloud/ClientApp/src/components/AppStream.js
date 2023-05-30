@@ -3,15 +3,20 @@ import {  useParams } from "react-router-dom";
 
 export const AppStream = (props) => {
   const {id} = useParams();
-  const [url, setUrl] = useState()
+  const [data, setData] = useState({
+    url: null,
+    deviceId: null
+  })
+  const url = data.url
+  const deviceId= data.deviceId
   const [error, setError] = useState(null)
   useEffect(() => {
       fetch(`api/v1/appstream?id=${id}`)
                 .then(
                   response => {
-                      response.text().then(data => {
+                      response.json().then(data => {
                         if(response.status == 200){
-                          setUrl(data)
+                          setData(data)
                         }else{
                           setError(data)
                         }
@@ -19,14 +24,20 @@ export const AppStream = (props) => {
                   }
                 )
   }, [])
-  // onLoad={e => 
-  //   setTimeout(() => {
-  //     e.target.contentWindow['connect_1'].click()
-  //     } , 2500) }
+
   return (
   <div>
     <h1 >App Stream #{id}</h1>
-    {url && <iframe height={640} width={360} src={url} title="cvd"  ></iframe>}
+    {url && <iframe onLoad={e => { 
+            const w = e.target.contentWindow
+            w.WebSocket = new Proxy(w.WebSocket, {
+              construct (w, args) {
+                const url = args[0].replace('/list_devices', '/list_devices/' + deviceId ).replace('/connect_client', '/connect_client/' + deviceId);
+                return new WebSocket(url);
+              }
+            });
+            w.UpdateDeviceList()
+       }} height={640} width={360} src={url} title={deviceId}  ></iframe>}
     {error && <font color="red">{error}</font>}
   </div>
 );

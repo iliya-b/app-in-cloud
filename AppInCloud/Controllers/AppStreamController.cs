@@ -67,7 +67,7 @@ public class AppStreamController : ControllerBase
         var app  = _db.MobileApps.First(f => f.Id == id && f.UserId == userId);
         var user = _db.Users.Where(f => f.Id == userId).Include(f => f.Devices).First();
         
-        Models.Device? device = _db.Devices.Find("cvd-2");//app.Device;
+        Models.Device? device = app.Device;
         if(device is null || !device.IsActive || device.Status == Device.Statuses.DISABLE){
             return Unauthorized("No device is available: " + (device is null ? "device not found" : "device is down or disabled"));
         }
@@ -104,7 +104,7 @@ public class AppStreamController : ControllerBase
         
         try	
         {
-            HttpResponseMessage response = await client.PostAsync("https://localhost:" + (8442 + CuttlefishLaunchOptions.getBaseNumber(device.Target)) + "/polled_connections", new StringContent(JsonSerializer.Serialize(deviceRequest)));
+            HttpResponseMessage response = await client.PostAsync("https://localhost:" + (8443 + CuttlefishLaunchOptions.getBaseNumber(device.Target)) + "/polled_connections", new StringContent(JsonSerializer.Serialize(deviceRequest)));
             response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync();
             return new ContentResult { Content = responseBody, ContentType = "application/json" };

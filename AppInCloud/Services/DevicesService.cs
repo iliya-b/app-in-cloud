@@ -14,7 +14,7 @@ class DevicesService {
     public DevicesService(ILogger<DevicesService> logger, Data.ApplicationDbContext db, ADB adb, VirtualDeviceService cuttlefishService) => (_db, _adb, _cuttlefishService, _logger) = (db, adb, cuttlefishService, logger);
 
 
-    public async void Check(){
+    public async Task Check(){
         foreach(var user in _db.Users.Include(u=>u.Devices).ToList()){
             foreach(var device in user.Devices){
                 bool time_limit = device.StartedAt + user.DailyLimit < DateTime.Now;

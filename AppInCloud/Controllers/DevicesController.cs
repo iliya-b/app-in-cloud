@@ -244,7 +244,7 @@ public class DevicesController : ControllerBase
             }
         }
         device.Status = isOn ? Device.Statuses.DISABLE : Device.Statuses.ENABLE;
-        if(!isOn) device.StartedAt = DateTime.Now;
+        if(!isOn) device.StartedAt = DateTime.UtcNow;
         _db.Devices.Update(device);
         _db.SaveChanges();
 

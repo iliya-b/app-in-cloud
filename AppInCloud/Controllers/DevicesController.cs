@@ -236,8 +236,15 @@ public class DevicesController : ControllerBase
         var isOn = await _adb.HealthCheck(device.getSerialNumber());
         var launchOptions = Device.GetLaunchOptions(device);
         if(launchOptions is null) return UnprocessableEntity();
-
+        if(device.Status == Device.Statuses.DISABLE){
+            foreach(var _user in _db.Users.ToList()){
+                if(device.StartedAt > DateTime.Now.Date && device.StartedAt + _user.DailyLimit < DateTime.Now){
+                    return UnprocessableEntity(new { Errors = new [] {"Running time exceeded"}});
+                }
+            }
+        }
         device.Status = isOn ? Device.Statuses.DISABLE : Device.Statuses.ENABLE;
+        if(!isOn) device.StartedAt = DateTime.Now;
         _db.Devices.Update(device);
         _db.SaveChanges();
 
@@ -245,6 +252,9 @@ public class DevicesController : ControllerBase
             var rebootJob =  BackgroundJob.Enqueue<ADB>(job => job.RebootAndWait(new [] {serial}));
             var switchJob = BackgroundJob.ContinueJobWith<VirtualDeviceService>(rebootJob, job => job.Stop(N));
         }else{
+            if(device.IsRanOutLimit(user)){
+                return UnprocessableEntity(new { Errors = new [] {"Running time exceeded"}});
+            }
             if(user.AllowedRunningMachinesAmount == user.Devices.Where(d=>d.Status == Device.Statuses.ENABLE).Count()) 
                 return UnprocessableEntity(new { Errors = new [] {"Running machines limit exceeded"}});
 

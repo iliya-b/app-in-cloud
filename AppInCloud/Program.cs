@@ -172,7 +172,7 @@ using (IServiceScope scope = app.Services.CreateScope())
 }
 
 
-RecurringJob.AddOrUpdate("easyjob", () => Console.Write("Easy!"), Cron.Daily);
+RecurringJob.AddOrUpdate<DevicesService>("check_limits", (job) => job.Check(), Cron.Minutely);
 
 
 app.UseEndpoints(endpoints => {

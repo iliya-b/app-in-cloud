@@ -41,6 +41,10 @@ public class Device
             InstanceBaseNumber = null
         };
     }
+
+    public bool IsRanOutLimit(ApplicationUser user){
+        return StartedAt + user.DailyLimit < DateTime.Now;
+    }
     public static CuttlefishLaunchOptions? GetLaunchOptions (Device device) {
 
         return device.Target switch {

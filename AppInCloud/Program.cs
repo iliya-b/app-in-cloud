@@ -113,13 +113,6 @@ else
 }
 
 
-app.Use((context, next) =>
-{
-    Console.WriteLine(context.Request.Headers["Referrer"]);
-    return next();
-});
-
-
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
@@ -145,7 +138,7 @@ using (IServiceScope scope = app.Services.CreateScope())
         if(!context.Devices.Any(d => d.Id == Id)) context.Devices.Add(device);
     }
     
-    for(int i=1; i <= 2 ; ++i){
+    for(int i=1; i <= 5 ; ++i){
         var Id = "cvd-" + i;
         var device = new Device() {
             Id=Id,
@@ -177,6 +170,9 @@ using (IServiceScope scope = app.Services.CreateScope())
 
     context.SaveChanges();
 }
+
+
+RecurringJob.AddOrUpdate("easyjob", () => Console.Write("Easy!"), Cron.Daily);
 
 
 app.UseEndpoints(endpoints => {

@@ -9,7 +9,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AppInCloud.Controllers;
 
-[Authorize(Policy = "admin")]
+[Authorize]
 [Route("/api/v1/admin")]
 [ApiController]
 public class DevicesController : ControllerBase
@@ -39,6 +39,8 @@ public class DevicesController : ControllerBase
         return tasksCount() == 0;
     }
     [HttpGet]
+    [Authorize(Policy = "admin")]
+
     [Route("Devices")]
     public IActionResult GetDevices()
     {
@@ -96,7 +98,6 @@ public class DevicesController : ControllerBase
         });
     }
     
-
     private IActionResult assignDevice(Device device, ApplicationUser user, bool unassign)
     {
         if(unassign) {
@@ -110,6 +111,7 @@ public class DevicesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "admin")]
     [Route("Devices/{deviceId}/Assign")]
     public IActionResult assignDevice(string deviceId, [FromForm] [EmailAddress] string userEmail, [FromForm] bool unassign ){
 
@@ -162,12 +164,17 @@ public class DevicesController : ControllerBase
     [Route("Devices/Add")]
     public IActionResult createDevice([FromForm] string target, [FromForm] int memory){
         if(!canRunTask()) return UnprocessableEntity(new { Errors = new [] {"Cannot handle this device now: running other tasks"}});
+        var user = GetUser();
+        if(user.AllowedMachinesAmount == user.Devices.Count()) return UnprocessableEntity(new { Errors = new [] {"Machines limit exceeded"}});
+        
         if(target != Device.Targets._12_x86_64.ToString() && target != Device.Targets._13_x86_64.ToString()) return UnprocessableEntity("Invalid target");
         var chosenTarget = Device.ParseTarget(target);
         Device? availableDevice = _db.Devices.Where(d => !d.IsActive).Where(d => d.Target == chosenTarget).FirstOrDefault();
         if(availableDevice is null)  return NotFound();
         availableDevice.IsActive = true;
         availableDevice.Memory = memory >= 512 ? memory : 1536;
+        availableDevice.Users.Clear();
+        availableDevice.Users.Add(GetUser());
         _db.Devices.Update(availableDevice);
         _db.SaveChanges();
 
@@ -202,6 +209,10 @@ public class DevicesController : ControllerBase
     [Route("Devices/{deviceId}")]
     public async Task<IActionResult> deleteDevice(string deviceId){
         var device = _db.Devices.Where(d => d.Id == deviceId).Include(d => d.Users).First();
+        var user = GetUser();
+        if(!user.IsAdmin && !user.Devices.Any(d => d.Id == device.Id)){
+            return Unauthorized(new { Errors = new [] {"Cannot access device"}});
+        }
         device.IsActive = false;
         device.Status = Device.Statuses.DISABLE;
         await _adb.Halt(device.getSerialNumber());
@@ -216,6 +227,10 @@ public class DevicesController : ControllerBase
     public async Task<IActionResult> switchDevice(string deviceId){
         if(!canRunTask()) return UnprocessableEntity(new { Errors = new [] {"Cannot handle this device now: running other tasks"}});
         var device = _db.Devices.Where(d => d.Id == deviceId).First();
+        var user = GetUser();
+        if(!user.IsAdmin && !user.Devices.Any(d => d.Id == device.Id)){
+            return Unauthorized(new { Errors = new [] {"Cannot access device"}});
+        }
         var N = device.getCuttlefishNumber();
         var serial = device.getSerialNumber();
         var isOn = await _adb.HealthCheck(device.getSerialNumber());
@@ -230,8 +245,10 @@ public class DevicesController : ControllerBase
             var rebootJob =  BackgroundJob.Enqueue<ADB>(job => job.RebootAndWait(new [] {serial}));
             var switchJob = BackgroundJob.ContinueJobWith<VirtualDeviceService>(rebootJob, job => job.Stop(N));
         }else{
-            var ensureStopJob = BackgroundJob.Enqueue<VirtualDeviceService>(job => job.Stop(N));
+            if(user.AllowedRunningMachinesAmount == user.Devices.Where(d=>d.Status == Device.Statuses.ENABLE).Count()) 
+                return UnprocessableEntity(new { Errors = new [] {"Running machines limit exceeded"}});
 
+            var ensureStopJob = BackgroundJob.Enqueue<VirtualDeviceService>(job => job.Stop(N));
             var switchJob = BackgroundJob.ContinueJobWith<VirtualDeviceService>(ensureStopJob, job => job.Launch(N, launchOptions));
         }
         
@@ -241,7 +258,12 @@ public class DevicesController : ControllerBase
     [Route("Devices/{deviceId}/Reset")]
     public async Task<IActionResult> resetDevice(string deviceId){
         if(!canRunTask()) return UnprocessableEntity(new { Errors = new [] {"Cannot handle this device now: running other tasks"}});
+
         var device = _db.Devices.Where(d => d.Id == deviceId).First();
+        var user = GetUser();
+        if(!user.IsAdmin && !user.Devices.Any(d => d.Id == device.Id)){
+            return Unauthorized(new { Errors = new [] {"Cannot access device"}});
+        }
         var deviceNumber = device.getCuttlefishNumber();
         string resetJob = BackgroundJob.Enqueue<VirtualDeviceService>(job => job.Powerwash(deviceNumber));
         
